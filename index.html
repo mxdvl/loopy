@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loopy</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+  /* Layout: one left-aligned reading column. Every demo is a track that
+     opens with a solid "start" and closes with a dashed "?": the known
+     beginning and the unknown end. */
+  :root {
+    --bg: #f3f6f6;
+    --surface: #ffffff;
+    --ink: #14201f;
+    --muted: #536462;
+    --line: #d3dcdb;
+    --accent: #0e6f6a;
+    --on-accent: #ffffff;
+    --stop: #b3412e;
+    --source-a: #2b62c9;
+    --source-b: #a35a08;
+    --source-c: #a03a8c;
+    --display: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+    --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1716; --surface: #172120; --ink: #e6efee; --muted: #9bb0ad;
+      --line: #2b3a38; --accent: #4fd1c5; --on-accent: #06211f; --stop: #f08a75;
+      --source-a: #7aa7ff; --source-b: #f0b35a; --source-c: #e58bd3;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1716; --surface: #172120; --ink: #e6efee; --muted: #9bb0ad;
+    --line: #2b3a38; --accent: #4fd1c5; --on-accent: #06211f; --stop: #f08a75;
+    --source-a: #7aa7ff; --source-b: #f0b35a; --source-c: #e58bd3;
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 1rem/1.6 var(--body);
+  }
+  .page {
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-block: 3rem 5rem;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+  h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.15; }
+  h1 { font-size: clamp(2.2rem, 7vw, 3.4rem); letter-spacing: -0.02em; }
+  h2 { font-size: 1.5rem; }
+  p { margin: 0; max-width: 65ch; }
+  code, pre, .mono { font-family: var(--mono); font-size: 0.85em; }
+  .lede { font-size: 1.15rem; color: var(--muted); }
+  .eyebrow { font: 600 0.75rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+
+  .intro, .demo, .words { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+  .demo { border-top: 1px solid var(--line); padding-top: 2rem; }
+
+  pre.code {
+    margin: 0; padding: 0.9rem 1rem; overflow-x: auto;
+    border-left: 3px solid var(--line); color: var(--ink); line-height: 1.55;
+  }
+  pre.code .dim { color: var(--muted); }
+
+  .stage {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 1rem; display: flex; flex-direction: column; gap: 0.9rem; min-width: 0;
+  }
+  .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+  button, input {
+    font: 600 0.85rem/1 var(--mono); color: var(--ink);
+    border: 1px solid var(--ink); border-radius: 4px; padding: 0.55rem 0.75rem;
+    background: transparent;
+  }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  button.stop { border-color: var(--stop); color: var(--stop); }
+  button.quiet { border-color: transparent; color: var(--muted); text-decoration: underline; padding-inline: 0.25rem; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input { width: 6rem; font-weight: 400; }
+
+  .status { font: 400 0.8rem/1.2 var(--mono); color: var(--muted); margin-left: auto; display: inline-flex; align-items: center; gap: 0.4rem; }
+  .status::before { content: ""; width: 0.55rem; height: 0.55rem; border-radius: 50%; border: 1px solid var(--muted); }
+  .status[data-kind="paused"]::before { background: var(--accent); border-color: var(--accent); }
+  .status[data-kind="waiting"]::before { border-color: var(--accent); border-style: dashed; }
+  .status[data-kind="end"]::before { background: var(--ink); border-color: var(--ink); border-radius: 1px; }
+  .status[data-kind="closed"]::before, .status[data-kind="error"]::before { background: var(--stop); border-color: var(--stop); border-radius: 1px; }
+
+  .track { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .chip {
+    font: 400 0.8rem/1 var(--mono); font-variant-numeric: tabular-nums;
+    padding: 0.4rem 0.5rem; border: 1px solid var(--line); border-radius: 3px; white-space: nowrap;
+  }
+  .chip.start, .chip.end { background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600; }
+  .chip.closed { background: var(--stop); border-color: var(--stop); color: var(--bg); font-weight: 600; }
+  .chip.tail { border-style: dashed; border-color: var(--muted); color: var(--muted); min-width: 3.2rem; text-align: center; }
+  .chip.tail.waiting { border-color: var(--accent); color: var(--accent); animation: pulse 0.9s ease-in-out infinite alternate; }
+  .chip.earlier, .chip.marker { border-color: transparent; color: var(--muted); padding-inline: 0.15rem; }
+  .chip.marker.loading { color: var(--accent); }
+  .chip.marker.loading::after { content: " …"; }
+  .chip[data-source="0"] { border-color: var(--source-a); color: var(--source-a); }
+  .chip[data-source="1"] { border-color: var(--source-b); color: var(--source-b); }
+  .chip[data-source="2"] { border-color: var(--source-c); color: var(--source-c); }
+  .chip.held { border-style: dashed; font-weight: 600; }
+  @keyframes pulse { from { opacity: 0.45; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .chip.tail.waiting { animation: none; } }
+
+  .count { font: 400 0.8rem/1.4 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .lanes { display: flex; flex-direction: column; gap: 0.5rem; }
+  .lane { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 0.25rem 0.75rem; align-items: center; }
+  .lane-name { font: 600 0.8rem/1.2 var(--mono); }
+  .lane-name small { display: block; font-weight: 400; color: var(--muted); }
+  .lane[data-source="0"] .lane-name { color: var(--source-a); }
+  .lane[data-source="1"] .lane-name { color: var(--source-b); }
+  .lane[data-source="2"] .lane-name { color: var(--source-c); }
+  .label { font: 600 0.7rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  @media (max-width: 30rem) { .lane { grid-template-columns: minmax(0, 1fr); } }
+
+  .log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .line { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 0.75rem; align-items: baseline; }
+  .line .tag { font: 600 0.75rem/1.4 var(--mono); color: var(--muted); }
+  .line.sent .tag, .line.sent .text { color: var(--accent); }
+  .line.sent .text { font-family: var(--mono); font-size: 0.85rem; }
+  .line.returned .tag { color: var(--ink); }
+  .line.returned .text { font-weight: 600; }
+  .answers { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+  .answers form { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+  footer { border-top: 1px solid var(--line); padding-top: 1.5rem; color: var(--muted); font-size: 0.9rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="intro">
+    <p class="eyebrow">Async generators in JavaScript</p>
+    <h1>A loop where you only know the beginning</h1>
+    <p class="lede">A generator is a loop that runs one turn at a time, and only when asked. Nobody decides in advance how many turns there will be. Here, you are the one asking.</p>
+    <pre class="code"><code>const numbers = pcg32(42n); <span class="dim">// seeded, and endless</span>
+numbers.next(); <span class="dim">// one turn of the loop. Again?</span></code></pre>
+    <div class="stage" id="seed">
+      <div class="controls">
+        <button class="primary" data-act="next" id="seed-next">next()</button>
+        <button data-act="auto" id="seed-auto">for…of</button>
+        <button class="stop" data-act="stop" id="seed-stop">break</button>
+        <button class="quiet" data-act="reset" id="seed-reset">Start again</button>
+        <span class="status" data-status data-kind="idle">Not started</span>
+      </div>
+      <ol class="track" data-track><li class="chip start">seed 42</li><li class="chip tail">?</li></ol>
+      <p class="count" data-count>The same seed always gives the same numbers. How many is up to you.</p>
+    </div>
+  </header>
+
+  <section class="demo" id="pages">
+    <div class="words">
+      <h2>A long list, fetched only as far as you read</h2>
+      <p>A catalogue of 100,000 stars is served five to a page. <code>paginate()</code> turns it into one stream of stars. A page is requested only when you ask for a star beyond the ones already fetched, so stopping the loop also stops the requests.</p>
+    </div>
+    <pre class="code"><code>for await (const star of paginate(fetchPage)) {
+  show(star);
+  if (seenEnough) break; <span class="dim">// no more requests</span>
+}</code></pre>
+    <div class="stage">
+      <div class="controls">
+        <button class="primary" data-act="next" id="pages-next">next()</button>
+        <button data-act="auto" id="pages-auto">for await</button>
+        <button class="stop" data-act="stop" id="pages-stop">break</button>
+        <button class="quiet" data-act="reset" id="pages-reset">Start again</button>
+        <span class="status" data-status data-kind="idle">Not started</span>
+      </div>
+      <ol class="track" data-track><li class="chip start">star 0</li><li class="chip tail">?</li></ol>
+      <p class="count" data-count>0 of 20,000 pages requested</p>
+    </div>
+  </section>
+
+  <section class="demo" id="adventure">
+    <div class="words">
+      <h2>A loop that listens</h2>
+      <p><code>next()</code> can carry a value in. The game below is one generator: each <code>yield</code> hands you a question and waits for your answer, and <code>return</code> ends it. There is no variable for the current room. The state is the line where the code is paused.</p>
+    </div>
+    <pre class="code"><code>const answer = yield "A cold hall. (north / down / leave)";
+if (answer === "north") return library; <span class="dim">// the next room</span></code></pre>
+    <div class="stage">
+      <div class="controls">
+        <span class="label">Your answer</span>
+        <span class="status" data-status data-kind="idle">Not started</span>
+      </div>
+      <ol class="log" data-log></ol>
+      <div class="answers" data-answers></div>
+    </div>
+  </section>
+
+  <section class="demo" id="merge">
+    <div class="words">
+      <h2>Three loops into one</h2>
+      <p>Three sensors report at their own irregular pace. <code>merge()</code> keeps one request open with each and passes on whichever reading arrives first. Stop asking and the sensors stop too: each holds one reading and is not asked for another. <code>break</code> switches all three off.</p>
+    </div>
+    <pre class="code"><code>for await (const reading of merge(thermo, hygro, anemo)) {
+  show(reading); <span class="dim">// in order of arrival</span>
+}</code></pre>
+    <div class="stage">
+      <div class="controls">
+        <button class="primary" data-act="next" id="merge-next">next()</button>
+        <button data-act="auto" id="merge-auto">for await</button>
+        <button class="stop" data-act="stop" id="merge-stop">break</button>
+        <button class="quiet" data-act="reset" id="merge-reset">Start again</button>
+        <span class="status" data-status data-kind="idle">Not started</span>
+      </div>
+      <span class="label">Sources</span>
+      <div class="lanes">
+        <div class="lane" data-source="0"><span class="lane-name">thermo<small data-lane-state>not asked yet</small></span><ol class="track" data-lane-track></ol></div>
+        <div class="lane" data-source="1"><span class="lane-name">hygro<small data-lane-state>not asked yet</small></span><ol class="track" data-lane-track></ol></div>
+        <div class="lane" data-source="2"><span class="lane-name">anemo<small data-lane-state>not asked yet</small></span><ol class="track" data-lane-track></ol></div>
+      </div>
+      <span class="label">Merged</span>
+      <ol class="track" data-track><li class="chip start">start</li><li class="chip tail">?</li></ol>
+      <p class="count" data-count>Dashed readings are held by a sensor, waiting to be asked for.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>Every demo runs the modules from the repository unchanged: <code>prng.js</code>, <code>paginate.js</code>, <code>adventure.js</code> and <code>merge.js</code>.</p>
+  </footer>
+</main>
+
+<script type="module">
+  import { adventure } from "./adventure.js";
+  import { createCatalogue } from "./catalogue.js";
+  import { sleep } from "./helpers.js";
+  import { merge } from "./merge.js";
+  import { paginate } from "./paginate.js";
+  import { pcg32 } from "./prng.js";
+
+  /** how many values a track shows before folding the oldest away */
+  const VISIBLE = 24;
+
+  /** @param {string} text @param {string} [kind] */
+  function chip(text, kind = "") {
+    const element = document.createElement("li");
+    element.className = `chip ${kind}`.trim();
+    element.textContent = text;
+    return element;
+  }
+
+  /** @param {Element} status @param {string} kind @param {string} text */
+  function report(status, kind, text) {
+    status.dataset.kind = kind;
+    status.textContent = text;
+  }
+
+  /**
+   * Put a person in the place of the loop: one button per thing a
+   * `for await` can do to an iterator.
+   *
+   * @param {string} id
+   * @param {object} options
+   * @param {string} options.start label of the first chip
+   * @param {(tools: { mark: (text: string) => HTMLElement }) => Iterator<any> | AsyncIterator<any>} options.create
+   * @param {(value: any) => HTMLElement} options.show
+   * @param {(pulled: number) => string} [options.count]
+   * @param {() => void} [options.clear]
+   * @param {number} [options.pace] pause between automatic turns
+   */
+  function stepper(id, { start, create, show, count, clear, pace = 450 }) {
+    const root = document.getElementById(id) ?? document.body;
+    const track = root.querySelector("[data-track]");
+    const status = root.querySelector("[data-status]");
+    const counter = root.querySelector("[data-count]");
+    const buttons = Object.fromEntries(
+      Array.from(root.querySelectorAll("[data-act]"), (button) => [button.dataset.act, button]),
+    );
+    const autoLabel = buttons.auto.textContent;
+
+    let iterator, tail, earlier;
+    let busy = false, auto = false, looping = false, ended = false, closing = false;
+    let pulled = 0, hidden = 0;
+
+    function render() {
+      buttons.next.disabled = busy || auto || ended || closing;
+      buttons.auto.disabled = ended || closing;
+      buttons.auto.textContent = auto ? "pause" : autoLabel;
+      buttons.stop.disabled = !iterator || ended || closing;
+      buttons.reset.disabled = closing;
+      tail?.classList.toggle("waiting", busy);
+      if (count && counter) counter.textContent = count(pulled);
+    }
+
+    /** @param {HTMLElement} element */
+    function add(element) {
+      tail.before(element);
+      const values = track.querySelectorAll(".chip.value");
+      if (values.length > VISIBLE) {
+        const oldest = values[0];
+        const before = oldest.previousElementSibling;
+        if (before?.classList.contains("marker")) before.remove();
+        oldest.remove();
+        hidden++;
+        earlier.hidden = false;
+        earlier.textContent = `+${hidden.toLocaleString("en")} earlier`;
+      }
+      return element;
+    }
+
+    /** @param {"end" | "closed" | "error"} kind @param {string} label @param {string} text */
+    function finish(kind, label, text) {
+      ended = true;
+      auto = false;
+      tail.replaceWith(chip(label, kind === "end" ? "end" : "closed"));
+      report(status, kind, text);
+      render();
+    }
+
+    async function next() {
+      if (busy || ended) return;
+      iterator ??= create({ mark: (text) => add(chip(text, "marker")) });
+      busy = true;
+      report(status, "waiting", "Waiting for next()");
+      render();
+      try {
+        const result = await iterator.next();
+        busy = false;
+        if (result.done) return finish("end", "end", "The generator returned");
+        pulled++;
+        add(show(result.value)).classList.add("value");
+        report(status, "paused", "Paused at yield");
+        render();
+      } catch (error) {
+        busy = false;
+        finish("error", "error", String(error));
+      }
+    }
+
+    async function toggle() {
+      auto = !auto;
+      render();
+      if (looping) return;
+      looping = true;
+      while (auto && !ended) {
+        await next();
+        if (auto && !ended) await sleep(pace);
+      }
+      looping = false;
+    }
+
+    async function stop() {
+      auto = false;
+      if (!iterator || ended) return;
+      closing = true;
+      render();
+      // `return()` waits its turn behind a `next()` that is still pending
+      await iterator.return?.();
+      closing = false;
+      finish("closed", "break", "Closed by break");
+    }
+
+    async function reset() {
+      await stop();
+      iterator = undefined;
+      busy = auto = ended = false;
+      pulled = hidden = 0;
+      earlier = chip("", "earlier");
+      earlier.hidden = true;
+      tail = chip("?", "tail");
+      track.replaceChildren(chip(start, "start"), earlier, tail);
+      clear?.();
+      report(status, "idle", "Not started");
+      render();
+    }
+
+    buttons.next.addEventListener("click", next);
+    buttons.auto.addEventListener("click", toggle);
+    buttons.stop.addEventListener("click", stop);
+    buttons.reset.addEventListener("click", reset);
+
+    return { next, reset };
+  }
+
+  // ————— the seed: an endless, synchronous generator
+
+  const seed = stepper("seed", {
+    start: "seed 42",
+    create: () => pcg32(42n),
+    show: (int) => chip((Number(int) / 2 ** 32).toFixed(3)),
+    count: (pulled) =>
+      pulled === 0
+        ? "The same seed always gives the same numbers. How many is up to you."
+        : `${pulled.toLocaleString("en")} of an unknown number of turns. The generator has computed nothing beyond the last one.`,
+    pace: 250,
+  });
+
+  // ————— pagination
+
+  const total = 100_000;
+  const pageSize = 5;
+  /** @type {number[]} */
+  let requests = [];
+
+  const pages = stepper("pages", {
+    start: "star 0",
+    create({ mark }) {
+      const catalogue = createCatalogue({ total, pageSize, latency: 1400 });
+      requests = catalogue.requests;
+      return paginate(async (cursor) => {
+        const marker = mark(`page ${requests.length + 1}`);
+        marker.classList.add("loading");
+        const page = await catalogue.fetchPage(cursor);
+        marker.classList.remove("loading");
+        return page;
+      });
+    },
+    show: (star) => chip(`${star.name} ${star.magnitude.toFixed(1)}`),
+    count: (pulled) =>
+      `${requests.length.toLocaleString("en")} of ${(total / pageSize).toLocaleString("en")} pages requested · ${pulled.toLocaleString("en")} ${pulled === 1 ? "star" : "stars"} read`,
+    clear: () => (requests = []),
+  });
+
+  // ————— merge
+
+  const lanes = Array.from(document.querySelectorAll("#merge .lane"), (lane) => ({
+    track: lane.querySelector("[data-lane-track]"),
+    state: lane.querySelector("[data-lane-state]"),
+  }));
+  const initials = ["T", "H", "A"];
+
+  /** @param {number} source @param {bigint} seed */
+  async function* sensor(source, seed) {
+    const { track, state } = lanes[source];
+    let count = 0;
+    try {
+      for (const int of pcg32(seed)) {
+        state.textContent = "measuring…";
+        await sleep(500 + Number(int % 1800n));
+        const held = chip(`${initials[source]}${++count}`, "held");
+        held.dataset.source = String(source);
+        track.append(held);
+        if (track.children.length > 6) track.firstElementChild.remove();
+        state.textContent = "holding a reading";
+        yield { source, count, held };
+      }
+    } finally {
+      state.textContent = "switched off";
+    }
+  }
+
+  const merged = stepper("merge", {
+    start: "start",
+    create: () => merge(sensor(0, 1n), sensor(1, 2n), sensor(2, 3n)),
+    show({ source, count, held }) {
+      held.classList.remove("held");
+      const element = chip(`${initials[source]}${count}`);
+      element.dataset.source = String(source);
+      return element;
+    },
+    count: (pulled) =>
+      pulled === 0
+        ? "Dashed readings are held by a sensor, waiting to be asked for."
+        : `${pulled.toLocaleString("en")} ${pulled === 1 ? "reading" : "readings"} merged. Dashed readings are held by a sensor, waiting to be asked for.`,
+    clear() {
+      for (const { track, state } of lanes) {
+        track.replaceChildren();
+        state.textContent = "not asked yet";
+      }
+    },
+    pace: 150,
+  });
+
+  // ————— adventure: next(value) carries the answer in
+
+  function adventureDemo() {
+    const root = document.getElementById("adventure") ?? document.body;
+    const log = root.querySelector("[data-log]");
+    const answers = root.querySelector("[data-answers]");
+    const status = root.querySelector("[data-status]");
+    let game;
+
+    /** @param {string} kind @param {string} tag @param {string} text */
+    function line(kind, tag, text) {
+      const item = document.createElement("li");
+      item.className = `line ${kind}`;
+      const label = document.createElement("span");
+      label.className = "tag";
+      label.textContent = tag;
+      const body = document.createElement("span");
+      body.className = "text";
+      body.textContent = text;
+      item.append(label, body);
+      log.append(item);
+      while (log.children.length > 9) log.firstElementChild.remove();
+    }
+
+    /** @param {string} label @param {() => void} action @param {string} [kind] */
+    function button(label, action, kind = "") {
+      const element = document.createElement("button");
+      element.type = "button";
+      element.className = kind;
+      element.textContent = label;
+      element.addEventListener("click", action);
+      return element;
+    }
+
+    /** Turn the options at the end of a prompt into controls. */
+    function offer(prompt) {
+      const options = /\(([^)]+)\)\s*$/.exec(prompt)?.[1] ?? "ok";
+      if (options === "a number") {
+        const form = document.createElement("form");
+        const input = document.createElement("input");
+        input.id = "adventure-guess";
+        input.type = "number";
+        input.min = "1";
+        input.max = "100";
+        input.required = true;
+        input.setAttribute("aria-label", "Your guess, from 1 to 100");
+        const submit = document.createElement("button");
+        submit.className = "primary";
+        submit.textContent = "next(guess)";
+        form.append(input, submit);
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          step(input.value);
+        });
+        answers.replaceChildren(form, quit());
+        input.focus({ preventScroll: true });
+      } else {
+        answers.replaceChildren(
+          ...options.split(" / ").map((option) =>
+            button(`next("${option}")`, () => step(option), "primary")
+          ),
+          quit(),
+        );
+      }
+    }
+
+    function quit() {
+      return button("return()", async () => {
+        answers.replaceChildren();
+        const { value } = await game.return("You put the game down.");
+        end("return()", String(value), "Closed from outside");
+      }, "stop");
+    }
+
+    /** @param {string} tag @param {string} text @param {string} message */
+    function end(tag, text, message) {
+      line("returned", tag, text);
+      report(status, tag === "return" ? "end" : "closed", message);
+      answers.replaceChildren(button("Play again", begin, "quiet"));
+    }
+
+    /** @param {string} [answer] left out for the very first turn */
+    async function step(answer) {
+      answers.replaceChildren();
+      if (answer !== undefined) line("sent", "next", JSON.stringify(answer));
+      report(status, "waiting", "Waiting for next()");
+      const result = await game.next(answer);
+      if (result.done) return end("return", result.value, "The generator returned");
+      line("yielded", "yield", result.value);
+      report(status, "paused", "Paused at yield");
+      offer(result.value);
+    }
+
+    function begin() {
+      log.replaceChildren();
+      game = adventure({ seed: BigInt(Date.now()), pause: sleep });
+      return step();
+    }
+
+    return begin();
+  }
+
+  // ————— open in a working state: a few turns already taken
+
+  await Promise.all([seed.reset(), pages.reset(), merged.reset()]);
+  adventureDemo();
+  for (let turn = 0; turn < 3; turn++) await seed.next();
+  for (let turn = 0; turn < 3; turn++) await pages.next();
+  await merged.next();
+</script>
+</body>
+</html>
