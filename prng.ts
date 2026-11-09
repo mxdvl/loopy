@@ -1,11 +1,8 @@
 /**
  * Pseudo-random number generator of numbers in range [0, 1).
- * Not for crypo purposes
- * @param {bigint} [seed] defaults to Date.now()
+ * Not for crypto purposes
  */
-export function* PRNG(
-  seed = BigInt(Date.now()),
-) {
+export function* PRNG(seed: bigint = BigInt(Date.now())): Generator<number> {
   const ceiling = 2 ** 32;
   const signal = AbortSignal.timeout(100);
 
@@ -20,10 +17,8 @@ export function* PRNG(
 
 /**
  * [Permuted Congruential Generator](https://en.wikipedia.org/wiki/Permuted_congruential_generator) for a 32-bit unsigned integer
- * @param {bigint} seed defaults to `42n`.
- * @param {bigint} sequence defaults to `0n`.
  */
-export function* pcg32(seed = 42n, sequence = 0n) {
+export function* pcg32(seed: bigint = 42n, sequence: bigint = 0n): Generator<bigint> {
   const multiplier = 6364136223846793005n;
   /** an even number, always */
   const increment = BigInt.asUintN(64, (sequence << 1n) | 1n);

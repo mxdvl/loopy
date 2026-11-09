@@ -1,4 +1,4 @@
-import { PRNG } from "./prng.js";
+import { PRNG } from "./prng.ts";
 
 for (const value of PRNG()) {
   console.log(value);
