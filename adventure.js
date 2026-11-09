@@ -76,7 +76,7 @@ async function* square({ day, low, high }) {
   while (true) {
     const answer = yield `${prompt} (tower / café)`;
     if (answer === "tower") return tower;
-    if (answer === "café") return café;
+    if (answer === "café" || answer === "cafe") return café;
     prompt = "The pigeons look at you, as they do every Monday.";
   }
 }

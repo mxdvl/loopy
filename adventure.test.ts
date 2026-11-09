@@ -78,7 +78,7 @@ Deno.test({
     await t.step({
       name: "the café gives a hint, but costs a try",
       async fn() {
-        const { respond, prompts } = script("get up", "café", "ok", "71");
+        const { respond, prompts } = script("get up", "cafe", "ok", "71");
         await play(adventure({ seed: 42n }), respond);
 
         assertMatch(prompts[2], /"above fifty"/);
