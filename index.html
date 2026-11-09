@@ -168,11 +168,11 @@ numbers.next(); <span class="dim">// one turn of the loop. Again?</span></code><
 
   <section class="demo" id="pages">
     <div class="words">
-      <h2>A long list, fetched only as far as you read</h2>
-      <p>A catalogue of 100,000 stars is served five to a page. <code>paginate()</code> turns it into one stream of stars. A page is requested only when you ask for a star beyond the ones already fetched, so stopping the loop also stops the requests.</p>
+      <h2>An almanac with no last page</h2>
+      <p>The almanac starts on 1 January 1970, the day JavaScript's clocks start counting, and serves one week per page. Weekdays and moons come round by themselves; the forecast is seeded, and delivered with total confidence. <code>paginate()</code> turns the weeks into one stream of days. A week is requested only when you ask for a day beyond the ones already fetched, so stopping the loop also stops the requests.</p>
     </div>
-    <pre class="code"><code>for await (const star of paginate(fetchPage)) {
-  show(star);
+    <pre class="code"><code>for await (const day of paginate(fetchPage)) {
+  show(day);
   if (seenEnough) break; <span class="dim">// no more requests</span>
 }</code></pre>
     <div class="stage">
@@ -183,18 +183,18 @@ numbers.next(); <span class="dim">// one turn of the loop. Again?</span></code><
         <button class="quiet" data-act="reset" id="pages-reset">Start again</button>
         <span class="status" data-status data-kind="idle">Not started</span>
       </div>
-      <ol class="track" data-track><li class="chip start">star 0</li><li class="chip tail">?</li></ol>
-      <p class="count" data-count>0 of 20,000 pages requested</p>
+      <ol class="track" data-track><li class="chip start">1 Jan 1970</li><li class="chip tail">?</li></ol>
+      <p class="count" data-count>No weeks requested yet. There is no last one.</p>
     </div>
   </section>
 
   <section class="demo" id="adventure">
     <div class="words">
-      <h2>A loop that listens</h2>
-      <p><code>next()</code> can carry a value in. The game below is one generator: each <code>yield</code> hands you a question and waits for your answer, and <code>return</code> ends it. There is no variable for the current room. The state is the line where the code is paused.</p>
+      <h2>The same Monday, again</h2>
+      <p><code>next()</code> can carry a value in. This town is one generator: each <code>yield</code> hands you a question and waits for your answer. There is no variable for where you are. The state is the line where the code is paused, and midnight leads back to the line where the morning starts. Only what you learnt carries over. Monday ends when the clock tower opens, or when you close the generator from outside with <code>return()</code>.</p>
     </div>
-    <pre class="code"><code>const answer = yield "A cold hall. (north / down / leave)";
-if (answer === "north") return library; <span class="dim">// the next room</span></code></pre>
+    <pre class="code"><code>const answer = yield "Day 1. It is Monday, 6:00. (get up / sleep in)";
+if (answer === "sleep in") return midnight; <span class="dim">// which returns morning</span></code></pre>
     <div class="stage">
       <div class="controls">
         <span class="label">Your answer</span>
@@ -207,11 +207,11 @@ if (answer === "north") return library; <span class="dim">// the next room</span
 
   <section class="demo" id="merge">
     <div class="words">
-      <h2>Three loops into one</h2>
-      <p>Three sensors report at their own irregular pace. <code>merge()</code> keeps one request open with each and passes on whichever reading arrives first. Stop asking and the sensors stop too: each holds one reading and is not asked for another. <code>break</code> switches all three off.</p>
+      <h2>Three clocks, none of them right</h2>
+      <p>The town has three clocks. Each strikes about once an hour and drifts in its own seeded way. <code>merge()</code> keeps one request open with each and passes on whichever chime comes first. Stop asking and time stops with you: each clock holds one chime and is not asked for another. <code>break</code> stops all three for good.</p>
     </div>
-    <pre class="code"><code>for await (const reading of merge(thermo, hygro, anemo)) {
-  show(reading); <span class="dim">// in order of arrival</span>
+    <pre class="code"><code>for await (const chime of merge(tower, station, chapel)) {
+  show(chime); <span class="dim">// in order of arrival</span>
 }</code></pre>
     <div class="stage">
       <div class="controls">
@@ -223,24 +223,24 @@ if (answer === "north") return library; <span class="dim">// the next room</span
       </div>
       <span class="label">Sources</span>
       <div class="lanes">
-        <div class="lane" data-source="0"><span class="lane-name">thermo<small data-lane-state>not asked yet</small></span><ol class="track" data-lane-track></ol></div>
-        <div class="lane" data-source="1"><span class="lane-name">hygro<small data-lane-state>not asked yet</small></span><ol class="track" data-lane-track></ol></div>
-        <div class="lane" data-source="2"><span class="lane-name">anemo<small data-lane-state>not asked yet</small></span><ol class="track" data-lane-track></ol></div>
+        <div class="lane" data-source="0"><span class="lane-name">tower<small data-lane-state>not wound yet</small></span><ol class="track" data-lane-track></ol></div>
+        <div class="lane" data-source="1"><span class="lane-name">station<small data-lane-state>not wound yet</small></span><ol class="track" data-lane-track></ol></div>
+        <div class="lane" data-source="2"><span class="lane-name">chapel<small data-lane-state>not wound yet</small></span><ol class="track" data-lane-track></ol></div>
       </div>
       <span class="label">Merged</span>
       <ol class="track" data-track><li class="chip start">start</li><li class="chip tail">?</li></ol>
-      <p class="count" data-count>Dashed readings are held by a sensor, waiting to be asked for.</p>
+      <p class="count" data-count>Dashed chimes are held by a clock, waiting to be asked for.</p>
     </div>
   </section>
 
   <footer>
-    <p>Every demo runs the modules from the repository unchanged: <code>prng.js</code>, <code>paginate.js</code>, <code>adventure.js</code> and <code>merge.js</code>.</p>
+    <p>The page ends here. The loops don't. Every demo runs the modules from the repository unchanged: <code>prng.js</code>, <code>paginate.js</code>, <code>almanac.js</code>, <code>adventure.js</code> and <code>merge.js</code>.</p>
   </footer>
 </main>
 
 <script type="module">
   import { adventure } from "./adventure.js";
-  import { createCatalogue } from "./catalogue.js";
+  import { createAlmanac } from "./almanac.js";
   import { sleep } from "./helpers.js";
   import { merge } from "./merge.js";
   import { paginate } from "./paginate.js";
@@ -405,27 +405,33 @@ if (answer === "north") return library; <span class="dim">// the next room</span
 
   // ————— pagination
 
-  const total = 100_000;
-  const pageSize = 5;
   /** @type {number[]} */
   let requests = [];
+  const month = new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
 
   const pages = stepper("pages", {
-    start: "star 0",
+    start: "1 Jan 1970",
     create({ mark }) {
-      const catalogue = createCatalogue({ total, pageSize, latency: 1400 });
-      requests = catalogue.requests;
-      return paginate(async (cursor) => {
-        const marker = mark(`page ${requests.length + 1}`);
+      const almanac = createAlmanac({ latency: 1400 });
+      requests = almanac.requests;
+      return paginate(async (week) => {
+        const marker = mark(`week ${requests.length + 1}`);
         marker.classList.add("loading");
-        const page = await catalogue.fetchPage(cursor);
+        const page = await almanac.fetchPage(week);
         marker.classList.remove("loading");
+        marker.textContent += ` · ${month.format(new Date(page.items[0].date))}`;
         return page;
       });
     },
-    show: (star) => chip(`${star.name} ${star.magnitude.toFixed(1)}`),
+    show(day) {
+      const element = chip(`${day.weekday.slice(0, 3)} ${Number(day.date.slice(8))} ${day.moon} ${day.sky}`);
+      element.title = day.date;
+      return element;
+    },
     count: (pulled) =>
-      `${requests.length.toLocaleString("en")} of ${(total / pageSize).toLocaleString("en")} pages requested · ${pulled.toLocaleString("en")} ${pulled === 1 ? "star" : "stars"} read`,
+      requests.length === 0
+        ? "No weeks requested yet. There is no last one."
+        : `${requests.length.toLocaleString("en")} ${requests.length === 1 ? "week" : "weeks"} requested. There is no last one. · ${pulled.toLocaleString("en")} ${pulled === 1 ? "day" : "days"} read`,
     clear: () => (requests = []),
   });
 
@@ -435,31 +441,31 @@ if (answer === "north") return library; <span class="dim">// the next room</span
     track: lane.querySelector("[data-lane-track]"),
     state: lane.querySelector("[data-lane-state]"),
   }));
-  const initials = ["T", "H", "A"];
+  const initials = ["T", "S", "C"];
 
   /** @param {number} source @param {bigint} seed */
-  async function* sensor(source, seed) {
+  async function* clock(source, seed) {
     const { track, state } = lanes[source];
     let count = 0;
     try {
       for (const int of pcg32(seed)) {
-        state.textContent = "measuring…";
+        state.textContent = "ticking…";
         await sleep(500 + Number(int % 1800n));
         const held = chip(`${initials[source]}${++count}`, "held");
         held.dataset.source = String(source);
         track.append(held);
         if (track.children.length > 6) track.firstElementChild.remove();
-        state.textContent = "holding a reading";
+        state.textContent = "holding a chime";
         yield { source, count, held };
       }
     } finally {
-      state.textContent = "switched off";
+      state.textContent = "stopped";
     }
   }
 
   const merged = stepper("merge", {
     start: "start",
-    create: () => merge(sensor(0, 1n), sensor(1, 2n), sensor(2, 3n)),
+    create: () => merge(clock(0, 1n), clock(1, 2n), clock(2, 3n)),
     show({ source, count, held }) {
       held.classList.remove("held");
       const element = chip(`${initials[source]}${count}`);
@@ -468,12 +474,12 @@ if (answer === "north") return library; <span class="dim">// the next room</span
     },
     count: (pulled) =>
       pulled === 0
-        ? "Dashed readings are held by a sensor, waiting to be asked for."
-        : `${pulled.toLocaleString("en")} ${pulled === 1 ? "reading" : "readings"} merged. Dashed readings are held by a sensor, waiting to be asked for.`,
+        ? "Dashed chimes are held by a clock, waiting to be asked for."
+        : `${pulled.toLocaleString("en")} ${pulled === 1 ? "chime" : "chimes"} merged. Dashed chimes are held by a clock, waiting to be asked for.`,
     clear() {
       for (const { track, state } of lanes) {
         track.replaceChildren();
-        state.textContent = "not asked yet";
+        state.textContent = "not wound yet";
       }
     },
     pace: 150,
@@ -548,7 +554,7 @@ if (answer === "north") return library; <span class="dim">// the next room</span
     function quit() {
       return button("return()", async () => {
         answers.replaceChildren();
-        const { value } = await game.return("You put the game down.");
+        const { value } = await game.return("You leave Monday running, and walk away.");
         end("return()", String(value), "Closed from outside");
       }, "stop");
     }
