@@ -2,8 +2,11 @@ import { pcg32 } from "./prng.js";
 
 /**
  * @typedef {object} Context
- * @property {number} code the vault's combination, in [1, 100]
- * @property {Set<string>} notes what the player has learnt so far
+ * @property {number} code what opens the clock tower, in [1, 100]
+ * @property {number} day how many Mondays so far
+ * @property {number} tries how many turns of the dial are left today
+ * @property {number} low the lowest the code can still be
+ * @property {number} high the highest the code can still be
  * @property {(ms: number) => Promise<void>} pause
  */
 
@@ -14,17 +17,18 @@ import { pcg32 } from "./prng.js";
  */
 
 /**
- * A small text adventure, as one generator.
+ * A town where it is always Monday, as one generator.
  *
  * - `yield` hands a prompt out and receives the player's answer back
  * - `yield*` moves into a room and evaluates to whatever that room returns
- * - `return` ends the game with its outcome
+ * - `return` ends the game, which only happens once the clock tower opens
  *
  * There is no `state` variable: the current state is the line where
- * the generator is paused.
+ * the generator is paused. Midnight leads back to the morning, so the
+ * game has no last day. What the player learnt is all that carries over.
  *
  * @param {object} [options]
- * @param {bigint} [options.seed] picks the vault's combination
+ * @param {bigint} [options.seed] picks the clock tower's code
  * @param {(ms: number) => Promise<void>} [options.pause] dramatic timing, instant by default
  * @returns {AsyncGenerator<string, string, string>}
  */
@@ -34,12 +38,15 @@ export async function* adventure(
   /** @type {Context} */
   const context = {
     code: Number(pcg32(seed).next().value % 100n) + 1,
-    notes: new Set(),
+    day: 1,
+    tries: 3,
+    low: 1,
+    high: 100,
     pause,
   };
 
   /** @type {Room | string} */
-  let room = hall;
+  let room = morning;
   while (typeof room === "function") {
     room = yield* room(context);
   }
@@ -47,42 +54,71 @@ export async function* adventure(
 }
 
 /** @type {Room} */
-async function* hall() {
-  let prompt = "A cold hall. A door leads north, stairs lead down.";
+async function* morning(context) {
+  context.tries = 3;
+  let prompt = [
+    `Day ${context.day}. It is Monday, 6:00.`,
+    context.day > 1 ? " Again." : "",
+    context.day === 3 ? " You feel this has all been yielded before." : "",
+  ].join("");
   while (true) {
-    const answer = yield `${prompt} (north / down / leave)`;
-    if (answer === "north") return library;
-    if (answer === "down") return vault;
-    if (answer === "leave") return "You walk away, none the richer.";
-    prompt = "You hesitate in the hall.";
+    const answer = yield `${prompt} (get up / sleep in)`;
+    if (answer === "get up") return square;
+    if (answer === "sleep in") return midnight;
+    prompt = "The alarm keeps ringing.";
   }
 }
 
 /** @type {Room} */
-async function* library({ code, notes }) {
-  const answer = yield "A library. One book is humming. (read / back)";
-  if (answer === "read") {
-    notes.add("book");
-    yield `The book whispers: "${code > 50 ? "above" : "at most"} fifty". (ok)`;
+async function* square({ day, low, high }) {
+  let prompt = "The square. The clock tower is locked, the café is open.";
+  if (day > 1) prompt += ` You remember: the code is from ${low} to ${high}.`;
+  while (true) {
+    const answer = yield `${prompt} (tower / café)`;
+    if (answer === "tower") return tower;
+    if (answer === "café") return café;
+    prompt = "The pigeons look at you, as they do every Monday.";
   }
-  return hall;
 }
 
 /** @type {Room} */
-async function* vault({ code, notes, pause }) {
-  const attempts = notes.has("book") ? 6 : 7;
-  let prompt = `A vault with a dial from 1 to 100. It allows ${attempts} tries.`;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
+async function* café(context) {
+  const above = context.code > 50;
+  if (above) context.low = Math.max(context.low, 51);
+  else context.high = Math.min(context.high, 50);
+  context.tries -= 1;
+  yield `The waiter says what he says every Monday: "${above ? "above" : "at most"} fifty". The coffee takes a while. (ok)`;
+  return tower;
+}
+
+/** @type {Room} */
+async function* tower(context) {
+  let prompt = `The door has a dial from 1 to 100. There is time for ${context.tries} tries before midnight.`;
+  while (context.tries-- > 0) {
     const guess = Number(yield `${prompt} (a number)`);
-    await pause(400);
-    if (guess === code) {
-      return `The vault opens on try ${attempt}. You are rich!`;
+    await context.pause(400);
+    if (guess === context.code) {
+      return `The door opens on day ${context.day}. Behind it: Tuesday.`;
     }
-    prompt = Number.isNaN(guess)
-      ? "The dial only takes numbers. A try is wasted."
-      : `The dial clicks: ${guess < code ? "higher" : "lower"}.`;
+    if (Number.isNaN(guess)) {
+      prompt = "The dial only takes numbers.";
+    } else if (guess < context.code) {
+      context.low = Math.max(context.low, guess + 1);
+      prompt = "The dial clicks: higher.";
+    } else {
+      context.high = Math.min(context.high, guess - 1);
+      prompt = "The dial clicks: lower.";
+    }
   }
-  return `The dial seizes up. The code was ${code}.`;
+  return midnight;
+}
+
+/** @type {Room} */
+async function* midnight(context) {
+  await context.pause(600);
+  context.day += 1;
+  yield "Midnight strikes. Everything goes dark. (ok)";
+  return morning;
 }
 
 /**
