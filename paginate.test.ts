@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert";
-import { createCatalogue } from "./catalogue.js";
+import { createAlmanac } from "./almanac.js";
 import { take } from "./helpers.js";
 import { paginate } from "./paginate.js";
 
@@ -9,50 +9,40 @@ Deno.test({
     await t.step({
       name: "yields every item, across all pages",
       async fn() {
-        const { fetchPage, requests } = createCatalogue({
-          total: 95,
-          pageSize: 10,
-        });
-        const stars = await Array.fromAsync(paginate(fetchPage));
+        const { fetchPage, requests } = createAlmanac({ weeks: 3 });
+        const days = await Array.fromAsync(paginate(fetchPage));
 
-        assertEquals(stars.length, 95);
-        assertEquals(stars.map(({ id }) => id), Array.from(Array(95).keys()));
-        assertEquals(requests, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]);
+        assertEquals(days.map(({ day }) => day), Array.from(Array(21).keys()));
+        assertEquals(requests, [0, 1, 2]);
       },
     });
 
     await t.step({
       name: "only requests the pages that are consumed",
       async fn() {
-        const { fetchPage, requests } = createCatalogue({
-          total: 10_000,
-          pageSize: 10,
-        });
-        const stars = await Array.fromAsync(take(paginate(fetchPage), 25));
+        const { fetchPage, requests } = createAlmanac();
+        const days = await Array.fromAsync(take(paginate(fetchPage), 16));
 
-        assertEquals(stars.length, 25);
-        assertEquals(requests, [0, 10, 20]);
+        assertEquals(days.length, 16);
+        assertEquals(requests, [0, 1, 2]);
       },
     });
 
     await t.step({
       name: "can start from a cursor",
       async fn() {
-        const { fetchPage, requests } = createCatalogue({
-          total: 95,
-          pageSize: 10,
-        });
-        const stars = await Array.fromAsync(paginate(fetchPage, 90));
+        const { fetchPage, requests } = createAlmanac({ weeks: 3 });
+        const days = await Array.fromAsync(paginate(fetchPage, 2));
 
-        assertEquals(stars.map(({ id }) => id), [90, 91, 92, 93, 94]);
-        assertEquals(requests, [90]);
+        assertEquals(days.map(({ day }) => day), [14, 15, 16, 17, 18, 19, 20]);
+        assertEquals(requests, [2]);
       },
     });
 
     await t.step({
       name: "handles an empty source",
       async fn() {
-        const { fetchPage, requests } = createCatalogue({ total: 0 });
+        const { fetchPage, requests } = createAlmanac({ weeks: 0 });
 
         assertEquals(await Array.fromAsync(paginate(fetchPage)), []);
         assertEquals(requests, [0]);
@@ -62,22 +52,58 @@ Deno.test({
 });
 
 Deno.test({
-  name: "catalogue is the same for the same seed",
-  async fn() {
-    const [first, second, other] = await Promise.all(
-      [42n, 42n, 43n].map((seed) =>
-        Array.fromAsync(
-          paginate(createCatalogue({ seed, total: 30 }).fetchPage),
-        )
-      ),
-    );
+  name: "almanac",
+  async fn(t) {
+    const week = (seed: bigint) =>
+      Array.fromAsync(take(paginate(createAlmanac({ seed }).fetchPage), 7));
 
-    assertEquals(first, second);
-    assertEquals(first.slice(0, 3), [
-      { id: 0, name: "Pipiga", magnitude: 0.8 },
-      { id: 1, name: "Alfohy", magnitude: 4.8 },
-      { id: 2, name: "Ormika", magnitude: 3.7 },
-    ]);
-    assertEquals(first[0].name === other[0].name, false);
+    await t.step({
+      name: "starts on the epoch, a Thursday",
+      async fn() {
+        const [first] = await week(42n);
+
+        assertEquals(first, {
+          day: 0,
+          date: "1970-01-01",
+          weekday: "Thursday",
+          moon: "🌗",
+          sky: "cloud",
+        });
+      },
+    });
+
+    await t.step({
+      name: "has the same sky for the same seed only",
+      async fn() {
+        const skies = async (seed: bigint) =>
+          (await week(seed)).map(({ sky }) => sky);
+
+        assertEquals(await skies(42n), await skies(42n));
+        assertEquals(await skies(42n), [
+          "cloud",
+          "hail",
+          "wind",
+          "cloud",
+          "rainbow",
+          "snow",
+          "snow",
+        ]);
+        assertEquals((await skies(42n)).join() === (await skies(43n)).join(), false);
+      },
+    });
+
+    await t.step({
+      name: "knows of a Friday the 13th under a full moon",
+      async fn() {
+        const { fetchPage, requests } = createAlmanac();
+        for await (const day of paginate(fetchPage)) {
+          if (day.date !== "1970-11-13") continue;
+          assertEquals([day.weekday, day.moon], ["Friday", "🌕"]);
+          break;
+        }
+
+        assertEquals(requests.length, 46);
+      },
+    });
   },
 });

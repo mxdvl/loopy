@@ -91,7 +91,7 @@ Deno.test({
         const { source, release, closed } = scripted(["a", "a"]);
         async function* faulty() {
           yield "fine";
-          throw new Error("broken sensor");
+          throw new Error("stopped clock");
         }
 
         release(0);
@@ -99,7 +99,7 @@ Deno.test({
         await assertRejects(
           () => Array.fromAsync(merge(faulty(), source("a"))),
           Error,
-          "broken sensor",
+          "stopped clock",
         );
         assertEquals(closed, ["a"]);
       },
