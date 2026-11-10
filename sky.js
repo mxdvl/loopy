@@ -1,8 +1,8 @@
 /**
  * Sun, moon and sea, worked out from first principles and a handful of
- * published constants. Good to a few minutes for the sun, an hour or so
- * for the moon's phases, and roughly a quarter of an hour and a hand's
- * width for the tide. An almanac, not a navigation aid.
+ * constants. Good to a few minutes for the sun, an hour or so for the
+ * moon's phases, and roughly twenty minutes and twenty centimetres for
+ * the tide. An almanac, not a navigation aid.
  */
 
 export const MINUTE = 60_000;
@@ -12,7 +12,7 @@ export const DAY = 24 * HOUR;
 /**
  * One wave in the tide: a named rhythm with a size and a delay.
  * @typedef {object} Constituent
- * @property {keyof typeof arguments_} name
+ * @property {keyof typeof rhythms} name
  * @property {number} amplitude in metres
  * @property {number} phase how far it lags behind the sky at Greenwich, in degrees
  */
@@ -35,31 +35,28 @@ export const DAY = 24 * HOUR;
  * @property {number} [height] of the sea, in metres above the datum
  */
 
-const FOOT = 0.3048;
-
 /**
- * Pillar Point Harbor, on Half Moon Bay in California.
- * Constituents are the eight largest of NOAA station 9414131, see
- * https://tidesandcurrents.noaa.gov/harcon.html?id=9414131
+ * St Mary's, the largest of the Isles of Scilly.
  *
- * The datum is this model's own mean lower low water, from 1983 to 2001.
+ * Its constituents were fitted by least squares to seven days of published
+ * tide tables from 2025, then checked against a day from 2026. Heights
+ * are above chart datum, as in British tide tables.
  * @type {Place}
  */
-export const halfMoonBay = {
-  name: "Half Moon Bay",
-  latitude: 37.5025,
-  longitude: -122.4822,
-  offset: -8,
-  datum: 0.883,
+export const scilly = {
+  name: "St Mary's",
+  latitude: 49.918,
+  longitude: -6.317,
+  offset: 0,
+  datum: 3.171,
   constituents: [
-    { name: "M2", amplitude: 1.781 * FOOT, phase: 184.1 },
-    { name: "K1", amplitude: 1.152 * FOOT, phase: 217.3 },
-    { name: "O1", amplitude: 0.738 * FOOT, phase: 203.3 },
-    { name: "S2", amplitude: 0.472 * FOOT, phase: 189.6 },
-    { name: "N2", amplitude: 0.39 * FOOT, phase: 158.4 },
-    { name: "P1", amplitude: 0.381 * FOOT, phase: 216.3 },
-    { name: "Q1", amplitude: 0.144 * FOOT, phase: 196.3 },
-    { name: "K2", amplitude: 0.128 * FOOT, phase: 190.0 },
+    { name: "M2", amplitude: 1.752, phase: 129.7 },
+    { name: "S2", amplitude: 0.596, phase: 172.9 },
+    { name: "N2", amplitude: 0.395, phase: 105.9 },
+    { name: "K2", amplitude: 0.18, phase: 177.4 },
+    { name: "M4", amplitude: 0.067, phase: 174.4 },
+    { name: "K1", amplitude: 0.054, phase: 81.6 },
+    { name: "O1", amplitude: 0.051, phase: 338.2 },
   ],
 };
 
@@ -81,7 +78,7 @@ const J2000 = Date.UTC(2000, 0, 1, 12);
  * Each one is a loop that started long ago and has no last turn.
  * @param {number} time
  */
-function hands(time) {
+export function hands(time) {
   const days = (time - J2000) / DAY;
   return {
     /** hours since midnight at Greenwich, as an angle: once round per day */
@@ -166,7 +163,7 @@ export function season(time, place) {
  * 18.6-year swing of the moon's orbit stretches (`f`) and shifts (`u`) it.
  * @satisfies {Record<string, (h: ReturnType<typeof hands>) => { angle: number, f: number, u: number }>}
  */
-const arguments_ = {
+export const rhythms = {
   M2: (h) => ({
     angle: 2 * h.clock - 2 * h.moon + 2 * h.sun,
     f: 1 - 0.037 * cos(h.node),
@@ -199,6 +196,11 @@ const arguments_ = {
     u: 10.8 * sin(h.node),
   }),
   P1: (h) => ({ angle: h.clock - h.sun - 90, f: 1, u: 0 }),
+  M4: (h) => ({
+    angle: 4 * h.clock - 4 * h.moon + 4 * h.sun,
+    f: (1 - 0.037 * cos(h.node)) ** 2,
+    u: -4.2 * sin(h.node),
+  }),
 };
 
 /**
@@ -210,7 +212,7 @@ export function sea(time, place) {
   const now = hands(time);
   let height = place.datum;
   for (const { name, amplitude, phase } of place.constituents) {
-    const { angle, f, u } = arguments_[name](now);
+    const { angle, f, u } = rhythms[name](now);
     height += f * amplitude * cos(angle + u - phase);
   }
   return height;
