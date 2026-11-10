@@ -17,15 +17,15 @@ test("almanac", async (t) => {
       weekday: "Thursday",
       season: "winter",
       moon: "🌗",
-      sunrise: "07:25",
-      sunset: "17:03",
+      sunrise: "08:24",
+      sunset: "16:34",
       tides: [
-        { clock: "04:40", kind: "high water", height: 1.54 },
-        { clock: "11:47", kind: "low water", height: 0.41 },
-        { clock: "17:30", kind: "high water", height: 0.95 },
-        { clock: "22:25", kind: "low water", height: 0.59 },
+        { clock: "04:12", kind: "low water", height: 1.97 },
+        { clock: "10:15", kind: "high water", height: 4.53 },
+        { clock: "16:47", kind: "low water", height: 1.95 },
+        { clock: "22:46", kind: "high water", height: 4.43 },
       ],
-      lowest: 0.41,
+      lowest: 1.95,
     });
   });
 
@@ -55,11 +55,12 @@ test("almanac", async (t) => {
     ok(days.every(({ tides }) => tides.length === 3 || tides.length === 4));
   });
 
-  await t.test("knows of a Friday the 13th under a full moon", async () => {
+  await t.test("knows of a Friday the 13th under a full moon, and its spring tide", async () => {
     const { fetchPage, requests } = createAlmanac();
     for await (const day of paginate(fetchPage)) {
       if (day.date !== "1970-11-13") continue;
       assertEquals([day.weekday, day.moon, day.season], ["Friday", "🌕", "autumn"]);
+      ok(day.lowest < 0.8);
       break;
     }
 

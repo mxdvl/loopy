@@ -4,7 +4,7 @@ import { paginate } from "../paginate.js";
 
 const { fetchPage, requests } = createAlmanac({ latency: 60 });
 
-console.log("Half Moon Bay, from 1 January 1970.");
+console.log("St Mary's, Isles of Scilly, from 1 January 1970.");
 console.log("Looking for a Friday the 13th under a full moon…");
 
 for await (const day of paginate(fetchPage)) {

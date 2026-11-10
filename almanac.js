@@ -1,6 +1,6 @@
 import { sleep } from "./helpers.js";
 import { pcg32 } from "./prng.js";
-import { DAY, HOUR, daylight, halfMoonBay, local, moon, season, seaHappenings } from "./sky.js";
+import { DAY, HOUR, daylight, scilly, local, moon, season, seaHappenings } from "./sky.js";
 
 /**
  * @typedef {object} Day
@@ -30,7 +30,7 @@ import { DAY, HOUR, daylight, halfMoonBay, local, moon, season, seaHappenings } 
  * @param {bigint} [options.seed] decides how long each response takes
  */
 export function createAlmanac({
-  place = halfMoonBay,
+  place = scilly,
   weeks = Infinity,
   latency = 0,
   seed = 42n,

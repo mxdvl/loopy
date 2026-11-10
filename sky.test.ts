@@ -5,7 +5,7 @@ import {
   HOUR,
   MINUTE,
   daylight,
-  halfMoonBay,
+  scilly,
   local,
   moon,
   moonHappenings,
@@ -28,36 +28,37 @@ test("sun", async (t) => {
     ok(Math.abs(declination) < 0.05);
   });
 
-  await t.test("rises and sets over Half Moon Bay", () => {
-    const { midnight } = local(Date.UTC(2026, 10, 10, 20), halfMoonBay);
-    const { rise, noon, set } = daylight(midnight, halfMoonBay);
+  await t.test("rises and sets over St Mary's", () => {
+    // published for 10 November 2026: sunrise 07:29, sunset 16:48
+    const { midnight } = local(Date.UTC(2026, 10, 10, 12), scilly);
+    const { rise, noon, set } = daylight(midnight, scilly);
 
     assertEquals(
-      [rise, noon, set].map((time) => local(time ?? 0, halfMoonBay).clock),
-      ["06:44", "11:54", "17:03"],
+      [rise, noon, set].map((time) => local(time ?? 0, scilly).clock),
+      ["07:30", "12:09", "16:48"],
     );
   });
 
   await t.test("neither rises nor sets in the polar night", () => {
-    const pole = { ...halfMoonBay, latitude: 80, offset: 0, longitude: 0 };
+    const pole = { ...scilly, latitude: 80, offset: 0, longitude: 0 };
     const { rise, set } = daylight(Date.UTC(2026, 11, 21), pole);
 
     assertEquals([rise, set], [undefined, undefined]);
   });
 
   await t.test("sets the seasons", () => {
-    const south = { ...halfMoonBay, latitude: -37.5 };
+    const south = { ...scilly, latitude: -37.5 };
 
-    assertEquals(season(Date.UTC(1970, 0, 1), halfMoonBay), "winter");
-    assertEquals(season(Date.UTC(1970, 3, 1), halfMoonBay), "spring");
-    assertEquals(season(Date.UTC(1970, 6, 1), halfMoonBay), "summer");
-    assertEquals(season(Date.UTC(1970, 9, 1), halfMoonBay), "autumn");
+    assertEquals(season(Date.UTC(1970, 0, 1), scilly), "winter");
+    assertEquals(season(Date.UTC(1970, 3, 1), scilly), "spring");
+    assertEquals(season(Date.UTC(1970, 6, 1), scilly), "summer");
+    assertEquals(season(Date.UTC(1970, 9, 1), scilly), "autumn");
     assertEquals(season(Date.UTC(1970, 0, 1), south), "summer");
   });
 
   await t.test("happens twice a day, for as long as anyone asks", () => {
-    const { midnight: from } = local(Date.UTC(2026, 0, 1, 20), halfMoonBay);
-    const kinds = sunHappenings(halfMoonBay, from)
+    const from = Date.UTC(2026, 0, 1);
+    const kinds = sunHappenings(scilly, from)
       .take(730)
       .map(({ kind }) => kind)
       .toArray();
@@ -104,42 +105,42 @@ test("moon", async (t) => {
 });
 
 test("sea", async (t) => {
-  await t.test("agrees with the published tide table, give or take", () => {
-    // Pillar Point Harbor on 15 September 2025, in Pacific Daylight Time
-    // and metres, as listed by tidetime.org
+  await t.test("agrees with a published tide table it has never seen", () => {
+    // St Mary's on 10 November 2026, in GMT and metres above chart datum,
+    // as listed by tidetimes.org.uk. The constants were fitted to 2025.
     const published = [
-      { clock: [0, 14], kind: "low water", height: -0.02 },
-      { clock: [7, 35], kind: "high water", height: 1.19 },
-      { clock: [11, 30], kind: "low water", height: 1.02 },
-      { clock: [17, 36], kind: "high water", height: 1.73 },
+      { clock: [4, 52], kind: "high water", height: 5.53 },
+      { clock: [11, 15], kind: "low water", height: 1.14 },
+      { clock: [17, 8], kind: "high water", height: 5.41 },
+      { clock: [23, 31], kind: "low water", height: 1.21 },
     ] as const;
-    const midnight = Date.UTC(2025, 8, 15, 7);
-    const computed = seaHappenings(halfMoonBay, midnight).take(4).toArray();
+    const midnight = Date.UTC(2026, 10, 10);
+    const computed = seaHappenings(scilly, midnight).take(4).toArray();
 
     for (const [index, { clock, kind, height }] of published.entries()) {
       const [hours, minutes] = clock;
       const happening = computed[index];
 
       assertEquals(happening?.kind, kind);
-      ok(near(happening?.time ?? 0, midnight + hours * HOUR + minutes * MINUTE, 20));
-      ok(Math.abs((happening?.height ?? 0) - height) < 0.15);
+      ok(near(happening?.time ?? 0, midnight + hours * HOUR + minutes * MINUTE, 10));
+      ok(Math.abs((happening?.height ?? 0) - height) < 0.25);
     }
   });
 
   await t.test("turns a little under four times a day", () => {
     const from = Date.UTC(2000, 0, 1);
-    const turns = seaHappenings(halfMoonBay, from).take(1000).toArray();
+    const turns = seaHappenings(scilly, from).take(1000).toArray();
     const perDay = 1000 / (((turns.at(-1)?.time ?? 0) - from) / DAY);
 
     ok(perDay > 3.8 && perDay < 3.9);
     ok(turns.every(({ kind }, index) => kind !== turns[index + 1]?.kind));
-    ok(turns.every(({ time, height }) => height === sea(time, halfMoonBay)));
+    ok(turns.every(({ time, height }) => height === sea(time, scilly)));
   });
 
   await t.test("falls lowest around new and full moons", () => {
     const from = Date.UTC(2026, 0, 1);
     let lowest = { time: from, height: Infinity };
-    for (const turn of seaHappenings(halfMoonBay, from)) {
+    for (const turn of seaHappenings(scilly, from)) {
       if (turn.time > from + 60 * DAY) break;
       if (turn.height < lowest.height) lowest = turn;
     }
@@ -150,11 +151,12 @@ test("sea", async (t) => {
 });
 
 test("local time ignores daylight saving", () => {
-  assertEquals(local(Date.UTC(2026, 6, 4, 19, 30), halfMoonBay), {
+  assertEquals(local(Date.UTC(2026, 6, 4, 19, 30), scilly), {
     date: "2026-07-04",
-    clock: "11:30",
+    clock: "19:30",
     weekday: "Saturday",
     long: "Saturday 4 July 2026",
-    midnight: Date.UTC(2026, 6, 4, 8),
+    midnight: Date.UTC(2026, 6, 4),
   });
+  assertEquals(local(Date.UTC(2026, 6, 4, 3), { ...scilly, offset: -8 }).date, "2026-07-03");
 });
