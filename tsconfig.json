@@ -17,8 +17,9 @@
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
     "checkJs": true,
+    "erasableSyntaxOnly": true,
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["*.js"]
+  "include": ["*.js", "*.ts"]
 }

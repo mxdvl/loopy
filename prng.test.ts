@@ -2,13 +2,11 @@ import { deepEqual as assertEquals, ok } from "node:assert/strict";
 import { describe, it, test } from "node:test";
 import { pcg32, PRNG } from "./prng.js";
 
-/** @param {number} actual @param {number} expected */
-function assertGreaterOrEqual(actual, expected) {
+function assertGreaterOrEqual(actual: number, expected: number): void {
   ok(actual >= expected);
 }
 
-/** @param {number} actual @param {number} expected */
-function assertLess(actual, expected) {
+function assertLess(actual: number, expected: number): void {
   ok(actual < expected);
 }
 
