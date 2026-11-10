@@ -1,0 +1,30 @@
+{
+  "name": "loopy",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A quick dive into asynchronous iterators & generators.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch main.js",
+    "test": "node --test",
+    "lint": "oxlint .",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "oxfmt": "0.75.0",
+    "oxlint": "1.92.0",
+    "typescript": "7.0.2"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.22.2",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.15.0"
+}
