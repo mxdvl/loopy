@@ -169,7 +169,7 @@ numbers.next(); <span class="dim">// one turn of the loop. Again?</span></code><
   <section class="demo" id="pages">
     <div class="words">
       <h2>An almanac with no last page</h2>
-      <p>This almanac covers one shore: Half Moon Bay, in California. It opens on 1 January 1970, the day JavaScript's clocks start counting, and gives one week per page. No page is stored anywhere. Each sunrise, moon and tide is worked out when its week is asked for, and comes out right to within a few minutes and a hand's width.</p>
+      <p>This almanac covers one shore: St Mary's, in the Isles of Scilly. It opens on 1 January 1970, the day JavaScript's clocks start counting, and gives one week per page. No page is stored anywhere. Each sunrise, moon and tide is worked out when its week is asked for, and comes out right to within a few minutes and a hand's width.</p>
       <p><code>paginate()</code> turns the weeks into one stream of days. A week is requested only when you ask for a day beyond the ones already fetched, so stopping the loop also stops the requests.</p>
     </div>
     <pre class="code"><code>for await (const day of paginate(fetchPage)) {
@@ -193,9 +193,9 @@ numbers.next(); <span class="dim">// one turn of the loop. Again?</span></code><
     <div class="words">
       <h2>What the tide uncovers</h2>
       <p><code>next()</code> can carry a value in. This shore is one generator: each <code>yield</code> hands you a low tide and waits for your answer. There is no variable for where you are. The state is the line where the code is paused.</p>
-      <p>The tides are today's, for Half Moon Bay. Time moves only when you let a tide go, and nobody knows in advance how many tides away the next low one is. The game ends when the basket holds one of everything, or when you close the generator from outside with <code>return()</code>.</p>
+      <p>The tides are today's, for St Mary's. Time moves only when you let a tide go, and nobody knows in advance how many tides away the next big spring tide is. The game ends when the basket holds one of everything, or when you close the generator from outside with <code>return()</code>.</p>
     </div>
-    <pre class="code"><code>const answer = yield "Low water at 17:36: -0.2 m. (go down / next tide / …)";
+    <pre class="code"><code>const answer = yield "Low water at 11:19: 1.0 m. (go down / next tide / …)";
 if (answer === "next tide") return hut; <span class="dim">// the same line, one tide later</span></code></pre>
     <div class="stage">
       <div class="controls">
@@ -238,7 +238,7 @@ if (answer === "next tide") return hut; <span class="dim">// the same line, one 
 
   <footer>
     <p>The page ends here. The loops don't.</p>
-    <p>Sunrises, moons and tides are calculated for Half Moon Bay, using NOAA's tidal constants for Pillar Point Harbor. They are an almanac's guess and not a navigation aid. Every demo runs the modules from the repository unchanged: <code>prng.js</code>, <code>sky.js</code>, <code>paginate.js</code>, <code>almanac.js</code>, <code>harvest.js</code> and <code>merge.js</code>.</p>
+    <p>Sunrises, moons and tides are calculated for St Mary's, in Greenwich Mean Time all year, with tidal constants fitted to published tide tables. They are an almanac's guess and not a navigation aid. Every demo runs the modules from the repository unchanged: <code>prng.js</code>, <code>sky.js</code>, <code>paginate.js</code>, <code>almanac.js</code>, <code>harvest.js</code> and <code>merge.js</code>.</p>
   </footer>
 </main>
 
@@ -249,7 +249,7 @@ if (answer === "next tide") return hut; <span class="dim">// the same line, one 
   import { merge } from "./merge.js";
   import { paginate } from "./paginate.js";
   import { pcg32 } from "./prng.js";
-  import { DAY, halfMoonBay, local, moon, moonHappenings, seaHappenings, sunHappenings } from "./sky.js";
+  import { DAY, scilly, local, moon, moonHappenings, seaHappenings, sunHappenings } from "./sky.js";
 
   /** how many values a track shows before folding the oldest away */
   const VISIBLE = 24;
@@ -451,7 +451,7 @@ if (answer === "next tide") return hut; <span class="dim">// the same line, one 
     count: (pulled) =>
       requests.length === 0
         ? "No weeks requested yet. There is no last one."
-        : `${requests.length.toLocaleString("en")} ${requests.length === 1 ? "week" : "weeks"} requested. There is no last one. · ${pulled.toLocaleString("en")} ${pulled === 1 ? "day" : "days"} read · ▼ is how far out the sea goes that day, in metres`,
+        : `${requests.length.toLocaleString("en")} ${requests.length === 1 ? "week" : "weeks"} requested. There is no last one. · ${pulled.toLocaleString("en")} ${pulled === 1 ? "day" : "days"} read · ▼ is that day's lowest water, in metres above chart datum`,
     clear: () => (requests = []),
   });
 
@@ -480,7 +480,7 @@ if (answer === "next tide") return hut; <span class="dim">// the same line, one 
     try {
       state.textContent = turning[source];
       for await (const happening of happenings) {
-        const held = chip(`${local(happening.time, halfMoonBay).clock} ${label(happening)}`, "held");
+        const held = chip(`${local(happening.time, scilly).clock} ${label(happening)}`, "held");
         held.dataset.source = String(source);
         track.append(held);
         if (track.children.length > 4) track.firstElementChild.remove();
@@ -502,8 +502,8 @@ if (answer === "next tide") return hut; <span class="dim">// the same line, one 
       const from = Date.now();
       clock = createClock({ from, speed: DAY / 4000 });
       return merge(
-        watched(0, replay(sunHappenings(halfMoonBay, from), clock)),
-        watched(1, replay(seaHappenings(halfMoonBay, from), clock)),
+        watched(0, replay(sunHappenings(scilly, from), clock)),
+        watched(1, replay(seaHappenings(scilly, from), clock)),
         watched(2, replay(moonHappenings(from), clock)),
       );
     },
@@ -514,7 +514,7 @@ if (answer === "next tide") return hut; <span class="dim">// the same line, one 
     close: () => clock?.stop(),
     show({ source, happening, held }) {
       held.classList.remove("held");
-      const { weekday, clock, date } = local(happening.time, halfMoonBay);
+      const { weekday, clock, date } = local(happening.time, scilly);
       const element = chip(`${weekday.slice(0, 3)} ${clock} ${label(happening)}`);
       element.dataset.source = String(source);
       element.title = date;
@@ -523,7 +523,7 @@ if (answer === "next tide") return hut; <span class="dim">// the same line, one 
     count: (pulled) =>
       pulled === 0
         ? "Dashed happenings are held by their source, waiting to be asked for."
-        : `${pulled.toLocaleString("en")} ${pulled === 1 ? "happening" : "happenings"} merged, in Half Moon Bay's own time. The moon does something about once a week.`,
+        : `${pulled.toLocaleString("en")} ${pulled === 1 ? "happening" : "happenings"} merged, in Greenwich Mean Time. The moon does something about once a week.`,
     clear() {
       for (const { track, state } of lanes) {
         track.replaceChildren();

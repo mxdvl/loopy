@@ -8,7 +8,7 @@ A quick dive into asynchronous iterators &amp; generators.
 
 ## Examples
 
-Everything happens on one shore, Half Moon Bay in California, where the sun, the moon and the sea are worked out from scratch in `sky.js`. They are an almanac's guess and not a navigation aid.
+Everything happens on one shore, St Mary's in the Isles of Scilly, where the sun, the moon and the sea are worked out from scratch in `sky.js`. They are an almanac's guess and not a navigation aid.
 
 - `node examples/almanac.js`: a paginated almanac with no last page.
 - `node examples/harvest.js`: a two-way generator, played by letting tides go.
