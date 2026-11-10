@@ -1,20 +1,21 @@
-// deno run examples/adventure.js
-import { createInterface } from "node:readline";
+// node examples/harvest.js
 import process from "node:process";
-import { adventure } from "../adventure.js";
+import { createInterface } from "node:readline";
+import { harvest } from "../harvest.js";
 import { sleep } from "../helpers.js";
 
 // The keyboard is an async iterator too: one line per `next()`.
 const lines = createInterface({ input: process.stdin })[Symbol.asyncIterator]();
-const game = adventure({ seed: BigInt(Date.now()), pause: sleep });
+// The game starts on today's tide.
+const game = harvest({ from: Date.now(), seed: BigInt(Date.now()), pause: sleep });
 
 let step = await game.next();
 while (!step.done) {
   console.log(`${step.value}\n>`);
   const line = await lines.next();
   step = line.done
-    // Monday has no exit, so closing the keyboard closes the generator.
-    ? await game.return("You leave Monday running, and walk away.")
+    ? // The tides have no last one, so closing the keyboard closes the generator.
+      await game.return("You leave the basket by the door. The tide does not wait.")
     : await game.next(line.value.trim());
 }
 
