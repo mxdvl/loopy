@@ -141,7 +141,7 @@
   .answers { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
   .answers form { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
-  footer { border-top: 1px solid var(--line); padding-top: 1.5rem; color: var(--muted); font-size: 0.9rem; }
+  footer { border-top: 1px solid var(--line); padding-top: 1.5rem; color: var(--muted); font-size: 0.9rem; display: flex; flex-direction: column; gap: 0.75rem; }
   a { color: var(--accent); }
 </style>
 </head>
@@ -169,7 +169,8 @@ numbers.next(); <span class="dim">// one turn of the loop. Again?</span></code><
   <section class="demo" id="pages">
     <div class="words">
       <h2>An almanac with no last page</h2>
-      <p>The almanac starts on 1 January 1970, the day JavaScript's clocks start counting, and serves one week per page. Weekdays and moons come round by themselves; the forecast is seeded, and delivered with total confidence. <code>paginate()</code> turns the weeks into one stream of days. A week is requested only when you ask for a day beyond the ones already fetched, so stopping the loop also stops the requests.</p>
+      <p>This almanac covers one shore: Half Moon Bay, in California. It opens on 1 January 1970, the day JavaScript's clocks start counting, and gives one week per page. No page is stored anywhere. Each sunrise, moon and tide is worked out when its week is asked for, and comes out right to within a few minutes and a hand's width.</p>
+      <p><code>paginate()</code> turns the weeks into one stream of days. A week is requested only when you ask for a day beyond the ones already fetched, so stopping the loop also stops the requests.</p>
     </div>
     <pre class="code"><code>for await (const day of paginate(fetchPage)) {
   show(day);
@@ -188,13 +189,14 @@ numbers.next(); <span class="dim">// one turn of the loop. Again?</span></code><
     </div>
   </section>
 
-  <section class="demo" id="adventure">
+  <section class="demo" id="harvest">
     <div class="words">
-      <h2>The same Monday, again</h2>
-      <p><code>next()</code> can carry a value in. This town is one generator: each <code>yield</code> hands you a question and waits for your answer. There is no variable for where you are. The state is the line where the code is paused, and midnight leads back to the line where the morning starts. Only what you learnt carries over. Monday ends when the clock tower opens, or when you close the generator from outside with <code>return()</code>.</p>
+      <h2>What the tide uncovers</h2>
+      <p><code>next()</code> can carry a value in. This shore is one generator: each <code>yield</code> hands you a low tide and waits for your answer. There is no variable for where you are. The state is the line where the code is paused.</p>
+      <p>The tides are today's, for Half Moon Bay. Time moves only when you let a tide go, and nobody knows in advance how many tides away the next low one is. The game ends when the basket holds one of everything, or when you close the generator from outside with <code>return()</code>.</p>
     </div>
-    <pre class="code"><code>const answer = yield "Day 1. It is Monday, 6:00. (get up / sleep in)";
-if (answer === "sleep in") return midnight; <span class="dim">// which returns morning</span></code></pre>
+    <pre class="code"><code>const answer = yield "Low water at 17:36: -0.2 m. (go down / next tide / …)";
+if (answer === "next tide") return hut; <span class="dim">// the same line, one tide later</span></code></pre>
     <div class="stage">
       <div class="controls">
         <span class="label">Your answer</span>
@@ -207,11 +209,12 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
 
   <section class="demo" id="merge">
     <div class="words">
-      <h2>Three clocks, none of them right</h2>
-      <p>The town has three clocks. Each strikes about once an hour and drifts in its own seeded way. <code>merge()</code> keeps one request open with each and passes on whichever chime comes first. Stop asking and time stops with you: each clock holds one chime and is not asked for another. <code>break</code> stops all three for good.</p>
+      <h2>Sun, moon and sea</h2>
+      <p>Three loops of different lengths. The sun comes round in a day, the sea in half a day and a little more, the moon in a month. None of them ends. Each is replayed from this moment, a day every four seconds, and <code>merge()</code> passes on whichever happens first.</p>
+      <p>Time passes only while you are waiting for a turn. Stop asking and the sky holds still. <code>break</code> lets all three go, though a generator cannot be closed while it waits: the page stops the clock first.</p>
     </div>
-    <pre class="code"><code>for await (const chime of merge(tower, station, chapel)) {
-  show(chime); <span class="dim">// in order of arrival</span>
+    <pre class="code"><code>for await (const happening of merge(sun, sea, moon)) {
+  show(happening); <span class="dim">// in order of arrival</span>
 }</code></pre>
     <div class="stage">
       <div class="controls">
@@ -223,28 +226,30 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
       </div>
       <span class="label">Sources</span>
       <div class="lanes">
-        <div class="lane" data-source="0"><span class="lane-name">tower<small data-lane-state>not wound yet</small></span><ol class="track" data-lane-track></ol></div>
-        <div class="lane" data-source="1"><span class="lane-name">station<small data-lane-state>not wound yet</small></span><ol class="track" data-lane-track></ol></div>
-        <div class="lane" data-source="2"><span class="lane-name">chapel<small data-lane-state>not wound yet</small></span><ol class="track" data-lane-track></ol></div>
+        <div class="lane" data-source="0"><span class="lane-name">sun<small data-lane-state>not asked yet</small></span><ol class="track" data-lane-track></ol></div>
+        <div class="lane" data-source="1"><span class="lane-name">sea<small data-lane-state>not asked yet</small></span><ol class="track" data-lane-track></ol></div>
+        <div class="lane" data-source="2"><span class="lane-name">moon<small data-lane-state>not asked yet</small></span><ol class="track" data-lane-track></ol></div>
       </div>
       <span class="label">Merged</span>
-      <ol class="track" data-track><li class="chip start">start</li><li class="chip tail">?</li></ol>
-      <p class="count" data-count>Dashed chimes are held by a clock, waiting to be asked for.</p>
+      <ol class="track" data-track><li class="chip start">now</li><li class="chip tail">?</li></ol>
+      <p class="count" data-count>Dashed happenings are held by their source, waiting to be asked for.</p>
     </div>
   </section>
 
   <footer>
-    <p>The page ends here. The loops don't. Every demo runs the modules from the repository unchanged: <code>prng.js</code>, <code>paginate.js</code>, <code>almanac.js</code>, <code>adventure.js</code> and <code>merge.js</code>.</p>
+    <p>The page ends here. The loops don't.</p>
+    <p>Sunrises, moons and tides are calculated for Half Moon Bay, using NOAA's tidal constants for Pillar Point Harbor. They are an almanac's guess and not a navigation aid. Every demo runs the modules from the repository unchanged: <code>prng.js</code>, <code>sky.js</code>, <code>paginate.js</code>, <code>almanac.js</code>, <code>harvest.js</code> and <code>merge.js</code>.</p>
   </footer>
 </main>
 
 <script type="module">
-  import { adventure } from "./adventure.js";
   import { createAlmanac } from "./almanac.js";
-  import { sleep } from "./helpers.js";
+  import { harvest } from "./harvest.js";
+  import { createClock, replay, sleep } from "./helpers.js";
   import { merge } from "./merge.js";
   import { paginate } from "./paginate.js";
   import { pcg32 } from "./prng.js";
+  import { DAY, halfMoonBay, local, moon, moonHappenings, seaHappenings, sunHappenings } from "./sky.js";
 
   /** how many values a track shows before folding the oldest away */
   const VISIBLE = 24;
@@ -274,9 +279,12 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
    * @param {(value: any) => HTMLElement} options.show
    * @param {(pulled: number) => string} [options.count]
    * @param {() => void} [options.clear]
+   * @param {() => void} [options.wait] called when a turn is asked for
+   * @param {() => void} [options.rest] called when that turn has come
+   * @param {() => void} [options.close] called before the iterator is closed
    * @param {number} [options.pace] pause between automatic turns
    */
-  function stepper(id, { start, create, show, count, clear, pace = 450 }) {
+  function stepper(id, { start, create, show, count, clear, wait, rest, close, pace = 450 }) {
     const root = document.getElementById(id) ?? document.body;
     const track = root.querySelector("[data-track]");
     const status = root.querySelector("[data-status]");
@@ -332,9 +340,11 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
       report(status, "waiting", "Waiting for next()");
       render();
       try {
+        wait?.();
         const result = await iterator.next();
+        rest?.();
         busy = false;
-        if (result.done) return finish("end", "end", "The generator returned");
+        if (result.done) return closing ? undefined : finish("end", "end", "The generator returned");
         pulled++;
         add(show(result.value)).classList.add("value");
         report(status, "paused", "Paused at yield");
@@ -363,6 +373,7 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
       closing = true;
       render();
       // `return()` waits its turn behind a `next()` that is still pending
+      close?.();
       await iterator.return?.();
       closing = false;
       finish("closed", "break", "Closed by break");
@@ -405,6 +416,9 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
 
   // ————— pagination
 
+  /** @param {number} metres */
+  const level = (metres) => metres.toFixed(1).replace("-", "−");
+
   /** @type {number[]} */
   let requests = [];
   const month = new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
@@ -424,71 +438,105 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
       });
     },
     show(day) {
-      const element = chip(`${day.weekday.slice(0, 3)} ${Number(day.date.slice(8))} ${day.moon} ${day.sky}`);
-      element.title = day.date;
+      const element = chip(
+        `${day.weekday.slice(0, 3)} ${Number(day.date.slice(8))} ${day.moon} ▼${level(day.lowest)}`,
+      );
+      element.title = [
+        `${day.date}, ${day.season}`,
+        `sunrise ${day.sunrise}, sunset ${day.sunset}`,
+        ...day.tides.map(({ clock, kind, height }) => `${clock} ${kind} ${level(height)} m`),
+      ].join("\n");
       return element;
     },
     count: (pulled) =>
       requests.length === 0
         ? "No weeks requested yet. There is no last one."
-        : `${requests.length.toLocaleString("en")} ${requests.length === 1 ? "week" : "weeks"} requested. There is no last one. · ${pulled.toLocaleString("en")} ${pulled === 1 ? "day" : "days"} read`,
+        : `${requests.length.toLocaleString("en")} ${requests.length === 1 ? "week" : "weeks"} requested. There is no last one. · ${pulled.toLocaleString("en")} ${pulled === 1 ? "day" : "days"} read · ▼ is how far out the sea goes that day, in metres`,
     clear: () => (requests = []),
   });
 
-  // ————— merge
+  // ————— merge: sun, sea and moon, replayed from now
 
   const lanes = Array.from(document.querySelectorAll("#merge .lane"), (lane) => ({
     track: lane.querySelector("[data-lane-track]"),
     state: lane.querySelector("[data-lane-state]"),
   }));
-  const initials = ["T", "S", "C"];
+  const turning = ["crossing the sky…", "turning…", "waxing or waning…"];
 
-  /** @param {number} source @param {bigint} seed */
-  async function* clock(source, seed) {
+  /** @param {{ time: number, kind: string, height?: number }} happening */
+  function label({ time, kind, height }) {
+    if (height !== undefined) return `${kind.replace(" water", "")} ${level(height)}`;
+    if (kind.startsWith("sun")) return kind.replace("sun", "");
+    return `${moon(time).glyph} ${kind}`;
+  }
+
+  /**
+   * Show what a source is doing while it is being merged.
+   * @param {number} source
+   * @param {AsyncIterable<{ time: number, kind: string, height?: number }>} happenings
+   */
+  async function* watched(source, happenings) {
     const { track, state } = lanes[source];
-    let count = 0;
     try {
-      for (const int of pcg32(seed)) {
-        state.textContent = "ticking…";
-        await sleep(500 + Number(int % 1800n));
-        const held = chip(`${initials[source]}${++count}`, "held");
+      state.textContent = turning[source];
+      for await (const happening of happenings) {
+        const held = chip(`${local(happening.time, halfMoonBay).clock} ${label(happening)}`, "held");
         held.dataset.source = String(source);
         track.append(held);
-        if (track.children.length > 6) track.firstElementChild.remove();
-        state.textContent = "holding a chime";
-        yield { source, count, held };
+        if (track.children.length > 4) track.firstElementChild.remove();
+        state.textContent = "holding one";
+        yield { source, happening, held };
+        state.textContent = turning[source];
       }
     } finally {
-      state.textContent = "stopped";
+      state.textContent = "let go";
     }
   }
 
+  /** @type {import("./helpers.js").Clock | undefined} */
+  let clock;
+
   const merged = stepper("merge", {
-    start: "start",
-    create: () => merge(clock(0, 1n), clock(1, 2n), clock(2, 3n)),
-    show({ source, count, held }) {
+    start: "now",
+    create() {
+      const from = Date.now();
+      clock = createClock({ from, speed: DAY / 4000 });
+      return merge(
+        watched(0, replay(sunHappenings(halfMoonBay, from), clock)),
+        watched(1, replay(seaHappenings(halfMoonBay, from), clock)),
+        watched(2, replay(moonHappenings(from), clock)),
+      );
+    },
+    // Time passes only while a turn is being waited for, and the moon
+    // may be days from doing anything: stopping the clock lets it go.
+    wait: () => clock?.run(),
+    rest: () => clock?.hold(),
+    close: () => clock?.stop(),
+    show({ source, happening, held }) {
       held.classList.remove("held");
-      const element = chip(`${initials[source]}${count}`);
+      const { weekday, clock, date } = local(happening.time, halfMoonBay);
+      const element = chip(`${weekday.slice(0, 3)} ${clock} ${label(happening)}`);
       element.dataset.source = String(source);
+      element.title = date;
       return element;
     },
     count: (pulled) =>
       pulled === 0
-        ? "Dashed chimes are held by a clock, waiting to be asked for."
-        : `${pulled.toLocaleString("en")} ${pulled === 1 ? "chime" : "chimes"} merged. Dashed chimes are held by a clock, waiting to be asked for.`,
+        ? "Dashed happenings are held by their source, waiting to be asked for."
+        : `${pulled.toLocaleString("en")} ${pulled === 1 ? "happening" : "happenings"} merged, in Half Moon Bay's own time. The moon does something about once a week.`,
     clear() {
       for (const { track, state } of lanes) {
         track.replaceChildren();
-        state.textContent = "not wound yet";
+        state.textContent = "not asked yet";
       }
     },
     pace: 150,
   });
 
-  // ————— adventure: next(value) carries the answer in
+  // ————— harvest: next(value) carries the answer in
 
-  function adventureDemo() {
-    const root = document.getElementById("adventure") ?? document.body;
+  function harvestDemo() {
+    const root = document.getElementById("harvest") ?? document.body;
     const log = root.querySelector("[data-log]");
     const answers = root.querySelector("[data-answers]");
     const status = root.querySelector("[data-status]");
@@ -506,7 +554,7 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
       body.textContent = text;
       item.append(label, body);
       log.append(item);
-      while (log.children.length > 9) log.firstElementChild.remove();
+      while (log.children.length > 7) log.firstElementChild.remove();
     }
 
     /** @param {string} label @param {() => void} action @param {string} [kind] */
@@ -519,51 +567,24 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
       return element;
     }
 
-    /** Turn the options at the end of a prompt into controls. */
+    /** Turn the options at the end of a prompt into buttons. */
     function offer(prompt) {
       const options = /\(([^)]+)\)\s*$/.exec(prompt)?.[1] ?? "ok";
-      if (options === "a number") {
-        const form = document.createElement("form");
-        const input = document.createElement("input");
-        input.id = "adventure-guess";
-        input.type = "number";
-        input.min = "1";
-        input.max = "100";
-        input.required = true;
-        input.setAttribute("aria-label", "Your guess, from 1 to 100");
-        const submit = document.createElement("button");
-        submit.className = "primary";
-        submit.textContent = "next(guess)";
-        form.append(input, submit);
-        form.addEventListener("submit", (event) => {
-          event.preventDefault();
-          step(input.value);
-        });
-        answers.replaceChildren(form, quit());
-        input.focus({ preventScroll: true });
-      } else {
-        answers.replaceChildren(
-          ...options.split(" / ").map((option) =>
-            button(`next("${option}")`, () => step(option), "primary")
-          ),
-          quit(),
-        );
-      }
-    }
-
-    function quit() {
-      return button("return()", async () => {
-        answers.replaceChildren();
-        const { value } = await game.return("You leave Monday running, and walk away.");
-        end("return()", String(value), "Closed from outside");
-      }, "stop");
+      answers.replaceChildren(
+        ...options.split(" / ").map((option) => button(`next("${option}")`, () => step(option), "primary")),
+        button("return()", async () => {
+          answers.replaceChildren();
+          const { value } = await game.return("You leave the basket by the door. The tide does not wait.");
+          end("return()", String(value), "Closed from outside");
+        }, "stop"),
+      );
     }
 
     /** @param {string} tag @param {string} text @param {string} message */
     function end(tag, text, message) {
       line("returned", tag, text);
       report(status, tag === "return" ? "end" : "closed", message);
-      answers.replaceChildren(button("Play again", begin, "quiet"));
+      answers.replaceChildren(button("Start another year", begin, "quiet"));
     }
 
     /** @param {string} [answer] left out for the very first turn */
@@ -580,7 +601,7 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
 
     function begin() {
       log.replaceChildren();
-      game = adventure({ seed: BigInt(Date.now()), pause: sleep });
+      game = harvest({ from: Date.now(), seed: BigInt(Date.now()), pause: sleep });
       return step();
     }
 
@@ -590,7 +611,7 @@ if (answer === "sleep in") return midnight; <span class="dim">// which returns m
   // ————— open in a working state: a few turns already taken
 
   await Promise.all([seed.reset(), pages.reset(), merged.reset()]);
-  adventureDemo();
+  harvestDemo();
   for (let turn = 0; turn < 3; turn++) await seed.next();
   for (let turn = 0; turn < 3; turn++) await pages.next();
   await merged.next();
