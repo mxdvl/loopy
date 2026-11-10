@@ -1,9 +1,19 @@
-import assert from "node:assert/strict";
+import { deepEqual as assertEquals, ok } from "node:assert/strict";
 import { test } from "node:test";
 import { pcg32, PRNG } from "./prng.js";
 
+/** @param {number} actual @param {number} expected */
+function assertGreaterOrEqual(actual, expected) {
+  ok(actual >= expected);
+}
+
+/** @param {number} actual @param {number} expected */
+function assertLess(actual, expected) {
+  ok(actual < expected);
+}
+
 test("PNRG [0, 1)", () => {
-  assert.deepEqual(
+  assertEquals(
     Array.from(PRNG(42n).take(12)),
     [
       0.13170378981158137, 0.755355317145586, 0.5831400000024587, 0.21037689154036343,
@@ -14,8 +24,8 @@ test("PNRG [0, 1)", () => {
 
   for (const seed of [42n, 120n, 987654321n, 0n]) {
     for (const value of PRNG(seed).take(2 ** 18)) {
-      assert.ok(value >= 0);
-      assert.ok(value < 1);
+      assertGreaterOrEqual(value, 0);
+      assertLess(value, 1);
     }
   }
 });
@@ -23,7 +33,7 @@ test("PNRG [0, 1)", () => {
 test("PCG32", async (t) => {
   const prng = pcg32().take(6);
 
-  assert.deepEqual(Array.from(prng), [
+  assertEquals(Array.from(prng), [
     565663470n,
     3244226384n,
     2504567229n,
@@ -33,7 +43,7 @@ test("PCG32", async (t) => {
   ]);
 
   await t.test("Rosetta 42, 54 first five", () => {
-    assert.deepEqual(Array.from(pcg32(42n, 54n).take(5)), [
+    assertEquals(Array.from(pcg32(42n, 54n).take(5)), [
       2707161783n,
       2068313097n,
       3122475824n,
@@ -50,6 +60,6 @@ test("PCG32", async (t) => {
       counts[bucket] = (counts[bucket] ?? 0) + 1;
     }
 
-    assert.deepEqual(counts, [20049, 20022, 20115, 19809, 20005]);
+    assertEquals(counts, [20049, 20022, 20115, 19809, 20005]);
   });
 });
