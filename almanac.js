@@ -1,55 +1,73 @@
-import { pcg32 } from "./prng.js";
 import { sleep } from "./helpers.js";
+import { pcg32 } from "./prng.js";
+import { DAY, HOUR, daylight, halfMoonBay, local, moon, season, seaHappenings } from "./sky.js";
 
 /**
  * @typedef {object} Day
  * @property {number} day days since the almanac began
  * @property {string} date as `YYYY-MM-DD`
  * @property {string} weekday
- * @property {string} moon the phase, give or take a day
- * @property {string} sky a forecast, made with total confidence
+ * @property {string} season
+ * @property {string} moon its phase at noon
+ * @property {string} [sunrise] as `HH:MM`
+ * @property {string} [sunset] as `HH:MM`
+ * @property {{ clock: string, kind: string, height: number }[]} tides heights in metres
+ * @property {number} lowest how far out the sea goes that day, in metres
  */
-
-const DAY = 86_400_000;
-const weekdays = [
-  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
-];
-const moons = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"];
-const skies = ["sun", "cloud", "rain", "fog", "wind", "snow", "hail", "rainbow"];
-
-/** how long the moon takes to come round again, in days */
-const lunation = 29.530588853;
-/** a new moon: 6 January 2000 at 18:14 UTC */
-const newMoon = Date.UTC(2000, 0, 6, 18, 14);
-
-/**
- * @param {number} time
- * @returns {string}
- */
-function moon(time) {
-  const age = (((time - newMoon) / DAY) % lunation + lunation) % lunation;
-  return moons[Math.round((age / lunation) * moons.length) % moons.length];
-}
 
 /**
  * A pretend paginated API over an almanac with no last page.
  * One page is one week, and week 0 starts when JavaScript's clocks do:
  * on Thursday 1 January 1970.
  *
- * Nothing is stored. Weekdays and moons come round on their own,
- * and the sky of day `n` is the `n`th value of a seeded generator.
+ * Nothing is stored. Every sunrise, moon and tide is worked out when its
+ * week is asked for, and would come out the same if asked again.
  *
  * @param {object} [options]
- * @param {bigint} [options.seed] decides the weather, forever
+ * @param {import("./sky.js").Place} [options.place]
  * @param {number} [options.weeks] where the almanac stops, if it ever does
  * @param {number} [options.latency] longest response time, in milliseconds
+ * @param {bigint} [options.seed] decides how long each response takes
  */
-export function createAlmanac(
-  { seed = 42n, weeks = Infinity, latency = 0 } = {},
-) {
+export function createAlmanac({
+  place = halfMoonBay,
+  weeks = Infinity,
+  latency = 0,
+  seed = 42n,
+} = {}) {
   /** every week that was requested, in order @type {number[]} */
   const requests = [];
   const jitter = pcg32(seed, 1n);
+  const epoch = -place.offset * HOUR;
+
+  /**
+   * @param {number} day
+   * @returns {Day}
+   */
+  function page(day) {
+    const midnight = epoch + day * DAY;
+    const noon = midnight + DAY / 2;
+    const { rise, set } = daylight(midnight, place);
+    const { date, weekday } = local(noon, place);
+
+    const tides = [];
+    for (const { time, kind, height } of seaHappenings(place, midnight)) {
+      if (time >= midnight + DAY) break;
+      tides.push({ clock: local(time, place).clock, kind, height: Math.round(height * 100) / 100 });
+    }
+
+    return {
+      day,
+      date,
+      weekday,
+      season: season(noon, place),
+      moon: moon(noon).glyph,
+      ...(rise === undefined ? {} : { sunrise: local(rise, place).clock }),
+      ...(set === undefined ? {} : { sunset: local(set, place).clock }),
+      tides,
+      lowest: Math.min(...tides.map(({ height }) => height)),
+    };
+  }
 
   /**
    * @param {number} [week]
@@ -62,21 +80,7 @@ export function createAlmanac(
     }
     if (week >= weeks) return { items: [], next: null };
 
-    const items = pcg32(seed)
-      .drop(week * 7)
-      .take(7)
-      .map((int, index) => {
-        const day = week * 7 + index;
-        const noon = (day + 0.5) * DAY;
-        return {
-          day,
-          date: new Date(noon).toISOString().slice(0, 10),
-          weekday: weekdays[new Date(noon).getUTCDay()],
-          moon: moon(noon),
-          sky: skies[Number(int) >>> 29],
-        };
-      })
-      .toArray();
+    const items = Array.from({ length: 7 }, (_, index) => page(week * 7 + index));
     return { items, next: week + 1 < weeks ? week + 1 : null };
   }
 
