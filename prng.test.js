@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { pcg32, PRNG } from "./prng.ts";
+import { pcg32, PRNG } from "./prng.js";
 
 test("PNRG [0, 1)", () => {
   assert.deepEqual(

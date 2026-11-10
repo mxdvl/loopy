@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "node --watch main.ts",
+    "dev": "node --watch main.js",
     "test": "node --test",
     "lint": "oxlint .",
     "fmt": "oxfmt .",
@@ -14,14 +14,21 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
-    "oxfmt": "^0.78.0",
-    "oxlint": "^1.93.0",
-    "typescript": "^7.0.0"
+    "@types/node": "24.19.2",
+    "oxfmt": "0.75.0",
+    "oxlint": "1.92.0",
+    "typescript": "7.0.2"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "23.6.0",
+      "onFail": "download"
+    }
   },
   "engines": {
-    "node": ">=23.6.0",
-    "pnpm": ">=12"
+    "node": "23.6.0",
+    "pnpm": "12.15.0"
   },
   "packageManager": "pnpm@12.15.0"
 }
