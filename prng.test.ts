@@ -1,14 +1,6 @@
 import { deepEqual as assertEquals, ok } from "node:assert/strict";
-import { describe, it, test } from "node:test";
+import { test } from "node:test";
 import { pcg32, PRNG } from "./prng.js";
-
-function assertGreaterOrEqual(actual: number, expected: number): void {
-  ok(actual >= expected);
-}
-
-function assertLess(actual: number, expected: number): void {
-  ok(actual < expected);
-}
 
 test("PNRG [0, 1)", () => {
   assertEquals(
@@ -22,13 +14,13 @@ test("PNRG [0, 1)", () => {
 
   for (const seed of [42n, 120n, 987654321n, 0n]) {
     for (const value of PRNG(seed).take(2 ** 18)) {
-      assertGreaterOrEqual(value, 0);
-      assertLess(value, 1);
+      ok(value >= 0);
+      ok(value < 1);
     }
   }
 });
 
-describe("PCG32", () => {
+test("PCG32", async (t) => {
   const prng = pcg32().take(6);
 
   assertEquals(Array.from(prng), [
@@ -40,7 +32,7 @@ describe("PCG32", () => {
     2722332799n,
   ]);
 
-  it("Rosetta 42, 54 first five", () => {
+  await t.test("Rosetta 42, 54 first five", () => {
     assertEquals(Array.from(pcg32(42n, 54n).take(5)), [
       2707161783n,
       2068313097n,
@@ -50,7 +42,7 @@ describe("PCG32", () => {
     ]);
   });
 
-  it("Rosetta first 100,000", () => {
+  await t.test("Rosetta first 100,000", () => {
     const counts = [0, 0, 0, 0, 0];
     for (const integer of pcg32(987654321n, 1n).take(100_000)) {
       const float = Number(integer) / 2 ** 32;
