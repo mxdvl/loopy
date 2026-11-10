@@ -10,20 +10,24 @@
  * @returns {AsyncGenerator<T, void, undefined>}
  */
 export async function* merge(...sources) {
-  const iterators = sources.map((source) => source[Symbol.asyncIterator]());
-  /** the one `next()` in flight for each source that has not ended */
+  /** the sources that have not ended */
+  const iterators = new Map(
+    sources.map((source, index) => [index, source[Symbol.asyncIterator]()]),
+  );
+  /** the one `next()` in flight for each of them */
   const pending = new Map(
-    iterators.map((iterator, index) => [index, advance(iterator, index)]),
+    Array.from(iterators, ([index, iterator]) => [index, advance(iterator, index)]),
   );
 
   try {
     while (pending.size > 0) {
-      const { index, result } = await Promise.race(pending.values());
+      const { index, iterator, result } = await Promise.race(pending.values());
       if (result.done) {
         pending.delete(index);
+        iterators.delete(index);
         continue;
       }
-      pending.set(index, advance(iterators[index], index));
+      pending.set(index, advance(iterator, index));
       yield result.value;
     }
   } finally {
@@ -32,9 +36,7 @@ export async function* merge(...sources) {
     // them: a source stuck on a promise that never settles would hold
     // the consumer up.
     for (const promise of pending.values()) promise.catch(() => {});
-    await Promise.allSettled(
-      Array.from(pending.keys(), (index) => iterators[index].return?.()),
-    );
+    await Promise.allSettled(Array.from(iterators.values(), (iterator) => iterator.return?.()));
   }
 }
 
@@ -44,7 +46,7 @@ export async function* merge(...sources) {
  * @param {number} index
  */
 function advance(iterator, index) {
-  return iterator.next().then((result) => ({ index, result }));
+  return iterator.next().then((result) => ({ index, iterator, result }));
 }
 
 /**
