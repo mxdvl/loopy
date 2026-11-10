@@ -1,5 +1,5 @@
 import { deepEqual as assertEquals, ok } from "node:assert/strict";
-import { test } from "node:test";
+import { describe, it, test } from "node:test";
 import { pcg32, PRNG } from "./prng.js";
 
 /** @param {number} actual @param {number} expected */
@@ -30,7 +30,7 @@ test("PNRG [0, 1)", () => {
   }
 });
 
-test("PCG32", async (t) => {
+describe("PCG32", () => {
   const prng = pcg32().take(6);
 
   assertEquals(Array.from(prng), [
@@ -42,7 +42,7 @@ test("PCG32", async (t) => {
     2722332799n,
   ]);
 
-  await t.test("Rosetta 42, 54 first five", () => {
+  it("Rosetta 42, 54 first five", () => {
     assertEquals(Array.from(pcg32(42n, 54n).take(5)), [
       2707161783n,
       2068313097n,
@@ -52,7 +52,7 @@ test("PCG32", async (t) => {
     ]);
   });
 
-  await t.test("Rosetta first 100,000", () => {
+  it("Rosetta first 100,000", () => {
     const counts = [0, 0, 0, 0, 0];
     for (const integer of pcg32(987654321n, 1n).take(100_000)) {
       const float = Number(integer) / 2 ** 32;
