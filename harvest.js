@@ -1,5 +1,8 @@
 import { pcg32 } from "./prng.js";
-import { HOUR, daylight, halfMoonBay, local, moon, season, seaHappenings } from "./sky.js";
+import { HOUR, daylight, scilly, local, moon, season, seaHappenings } from "./sky.js";
+
+/** A low water under this many metres only comes with the bigger spring tides. */
+const SPRING = 0.8;
 
 /**
  * Something to bring home, and when the shore gives it up.
@@ -13,34 +16,34 @@ import { HOUR, daylight, halfMoonBay, local, moon, season, seaHappenings } from 
 /** @type {Crop[]} */
 const crops = [
   {
-    name: "mussels",
+    name: "narcissi",
     seasons: ["winter"],
-    below: 0.6,
-    found: "Mussels crowd the bare rocks.",
-  },
-  {
-    name: "clams",
-    seasons: ["spring", "summer", "autumn", "winter"],
-    below: 0,
-    found: "The far sandbar is dry, and full of clams.",
+    below: Infinity,
+    found: "In the fields above the bay, the narcissi are in flower.",
   },
   {
     name: "seaweed",
     seasons: ["spring"],
-    below: 0.3,
+    below: 1.5,
     found: "Young seaweed shines on the low rocks.",
   },
   {
-    name: "blackberries",
+    name: "samphire",
     seasons: ["summer"],
     below: Infinity,
-    found: "On the bluff, the blackberries are ripe.",
+    found: "Along the top of the shore, the samphire is green.",
   },
   {
-    name: "pumpkins",
+    name: "blackberries",
     seasons: ["autumn"],
     below: Infinity,
-    found: "In the field behind the bluff, the pumpkins are ready.",
+    found: "In the hedges, the blackberries are ripe.",
+  },
+  {
+    name: "cockles",
+    seasons: ["spring", "summer", "autumn", "winter"],
+    below: SPRING,
+    found: "The channel has drained to sand, as far as the next island. It is full of cockles.",
   },
 ];
 
@@ -81,7 +84,7 @@ export function* daylightLows(place, from) {
 }
 
 /**
- * A year of gathering on a tidal shore, as one generator.
+ * A year of gathering on the shore of St Mary's, as one generator.
  *
  * - `yield` hands a prompt out and receives the player's answer back
  * - `yield*` moves into a room and evaluates to whatever that room returns
@@ -99,7 +102,7 @@ export function* daylightLows(place, from) {
  * @returns {AsyncGenerator<string, string, string>}
  */
 export async function* harvest({
-  place = halfMoonBay,
+  place = scilly,
   from = -place.offset * HOUR,
   seed = 42n,
   pause = () => Promise.resolve(),
@@ -159,14 +162,14 @@ async function* hut(context) {
   ].join(" ");
 
   while (true) {
-    const answer = yield `${prompt} (go down / next tide / next minus tide / next season)`;
+    const answer = yield `${prompt} (go down / next tide / next spring tide / next season)`;
     if (answer === "go down") return shore;
     if (answer === "next tide") {
       wait(context);
       return hut;
     }
-    if (answer === "next minus tide") {
-      wait(context, (tide) => tide.height < 0);
+    if (answer === "next spring tide") {
+      wait(context, (tide) => tide.height < SPRING);
       return hut;
     }
     if (answer === "next season") {
@@ -185,7 +188,7 @@ async function* shore(context) {
   const ready = crops.filter((crop) => crop.seasons.includes(now) && low.height < crop.below);
 
   if (ready.length === 0) {
-    yield "The sea has not gone far enough, and nothing on the bluff is ripe. (back)";
+    yield "The sea has not gone far enough, and nothing ashore is ready. (back)";
     wait(context);
     return hut;
   }
