@@ -26,9 +26,5 @@
       "onFail": "download"
     }
   },
-  "engines": {
-    "node": "24.22.2",
-    "pnpm": "12.15.0"
-  },
   "packageManager": "pnpm@12.15.0"
 }
