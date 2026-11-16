@@ -1,42 +1,37 @@
 // node examples/almanac.js
-import process from "node:process";
-import { fetchWeek } from "../almanac.js";
-import { paginate } from "../paginate.js";
+import { almanac, BACKWARDS, DAY, FORWARDS, WIDELY_AVAILABLE } from "../almanac.js";
 
-/** @param {import("../almanac.js").Day} day */
+/** @param {import("../almanac.js").Entry} entry */
 function describe({ date, weekday, moon }) {
   return `${date}  ${weekday}, ${moon}`;
 }
 
-/** @param {import("../almanac.js").Day} day */
-function isFridayThe13thUnderAFullMoon({ date, weekday, moon }) {
-  return weekday === "Friday" && date.endsWith("-13") && moon === "full moon";
+/** @param {import("../almanac.js").Entry} entry */
+function isThe13th({ date }) {
+  return date.endsWith("-13");
 }
 
-/**
- * The same request, leaving a dot behind each time it is made.
- * @param {number} cursor
- */
-function fetchWeekVisibly(cursor) {
-  process.stdout.write(".");
-  return fetchWeek(cursor);
+/** @param {import("../almanac.js").Entry} entry */
+function isFridayThe13thUnderAFullMoon(entry) {
+  return entry.weekday === "Friday" && isThe13th(entry) && entry.moon === "full moon";
 }
 
-// 1. One request gives one page, and says where the next one starts.
+// 1. An almanac needs to know where to begin, how far to step and which
+//    way to go. It has no end, so the reader decides how much to take.
 
-const page = await fetchWeek(0);
-console.log("Page 0 of the almanac:");
-for (const day of page.items) console.log(describe(day));
-console.log(`The next page is page ${page.next}.\n`);
+console.log("The first week of the almanac:");
+for (const entry of almanac(WIDELY_AVAILABLE, DAY, FORWARDS).take(7)) console.log(describe(entry));
 
-// 2. `paginate()` turns the pages into one list of days. Nobody knows
-//    how long the list is: each page is requested only when the loop
-//    gets to it, and leaving the loop is what ends the requests.
+// 2. Nobody knows in advance how many days a search will read.
+//    The almanac works out each one only when it is asked for.
 
-console.log("Looking for a Friday the 13th under a full moon, one dot per request:");
-for await (const day of paginate(fetchWeekVisibly, 0)) {
-  if (!isFridayThe13thUnderAFullMoon(day)) continue;
-  console.log(`\n${describe(day)}`);
-  break;
-}
-console.log("The loop has stopped, and so have the requests.");
+console.log("\nThe first Friday the 13th under a full moon:");
+const eerie = almanac(WIDELY_AVAILABLE, DAY, FORWARDS).find(isFridayThe13thUnderAFullMoon);
+console.log(eerie ? describe(eerie) : "There is none before the dates run out.");
+
+// 3. The epoch is a Friday, so a step of a week only ever lands on
+//    Fridays. Going backwards finds the Friday the 13th before it.
+
+console.log("\nThe last Friday the 13th before the almanac begins:");
+const earlier = almanac(WIDELY_AVAILABLE, 7 * DAY, BACKWARDS).find(isThe13th);
+console.log(earlier ? describe(earlier) : "There is none before the dates run out.");
