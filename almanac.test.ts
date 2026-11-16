@@ -1,69 +1,86 @@
-import { deepEqual as assertEquals, ok } from "node:assert/strict";
+import { deepEqual as assertEquals, rejects } from "node:assert/strict";
 import { test } from "node:test";
-import { createAlmanac } from "./almanac.js";
-import { take } from "./helpers.js";
+import { PHASES, day, fetchWeek, moonPhase } from "./almanac.js";
 import { paginate } from "./paginate.js";
 
-test("almanac", async (t) => {
-  await t.test("starts on the epoch, a Thursday", async () => {
-    const { fetchPage } = createAlmanac();
-    const { items, next } = await fetchPage();
-
-    assertEquals(next, 1);
-    assertEquals(items.length, 7);
-    assertEquals(items[0], {
-      day: 0,
-      date: "1970-01-01",
-      weekday: "Thursday",
-      season: "winter",
-      moon: "🌗",
-      sunrise: "08:24",
-      sunset: "16:34",
-      tides: [
-        { clock: "04:12", kind: "low water", height: 1.97 },
-        { clock: "10:15", kind: "high water", height: 4.53 },
-        { clock: "16:47", kind: "low water", height: 1.95 },
-        { clock: "22:46", kind: "high water", height: 4.43 },
-      ],
-      lowest: 1.95,
-    });
+test("moonPhase", async (t) => {
+  await t.test("names moons that are on record", () => {
+    // from published tables, in UTC
+    assertEquals(moonPhase(Date.UTC(1970, 10, 13, 7, 28)), "full moon");
+    assertEquals(moonPhase(Date.UTC(2000, 0, 6, 18, 14)), "new moon");
+    assertEquals(moonPhase(Date.UTC(2026, 10, 9, 7, 2)), "new moon");
+    assertEquals(moonPhase(Date.UTC(2026, 10, 17, 11, 48)), "first quarter");
+    assertEquals(moonPhase(Date.UTC(2026, 10, 24, 14, 53)), "full moon");
+    assertEquals(moonPhase(Date.UTC(2026, 11, 1, 6, 9)), "last quarter");
   });
 
-  await t.test("gives the same week whenever it is asked", async () => {
-    const [once, again] = [createAlmanac(), createAlmanac({ seed: 7n })];
+  await t.test("goes through the phases in order, before 1970 as well", () => {
+    const eighth = (29.530588853 / 8) * 86_400_000;
+    for (const start of [Date.UTC(2000, 0, 6, 18, 14), Date.UTC(1900, 0, 1, 13, 52)]) {
+      assertEquals(
+        PHASES.map((_, index) => moonPhase(start + index * eighth)),
+        PHASES,
+      );
+    }
+  });
+});
 
-    assertEquals(await once.fetchPage(2944), await again.fetchPage(2944));
+test("day", async (t) => {
+  await t.test("counts from the day async generators became widely available", () => {
+    assertEquals(day(0), { date: "2022-07-15", weekday: "Friday", moon: "full moon" });
   });
 
-  await t.test("can be made to stop", async () => {
-    const { fetchPage, requests } = createAlmanac({ weeks: 3 });
-    const days = await Array.fromAsync(paginate(fetchPage));
+  await t.test("knows leap days and the days before the start", () => {
+    assertEquals(day(594).date, "2024-02-29");
+    assertEquals(day(-1), { date: "2022-07-14", weekday: "Thursday", moon: "full moon" });
+  });
+});
+
+test("fetchWeek", async (t) => {
+  await t.test("gives seven days in a row, and the number of the next page", async () => {
+    const { items, next } = await fetchWeek(2);
 
     assertEquals(
-      days.map(({ day }) => day),
-      Array.from(Array(21).keys()),
+      items.map(({ date }) => date),
+      [
+        "2022-07-29",
+        "2022-07-30",
+        "2022-07-31",
+        "2022-08-01",
+        "2022-08-02",
+        "2022-08-03",
+        "2022-08-04",
+      ],
     );
-    assertEquals(requests, [0, 1, 2]);
+    assertEquals(next, 3);
   });
 
-  await t.test("has no last page otherwise", async () => {
-    const { fetchPage, requests } = createAlmanac();
-    const days = await Array.fromAsync(take(paginate(fetchPage), 1000));
-
-    assertEquals(days.at(-1)?.date, "1972-09-26");
-    assertEquals(requests.length, 143);
-    ok(days.every(({ tides }) => tides.length === 3 || tides.length === 4));
+  await t.test("gives the same page whenever it is asked", async () => {
+    assertEquals(await fetchWeek(2944), await fetchWeek(2944));
   });
 
-  await t.test("knows of a Friday the 13th under a full moon, and its spring tide", async () => {
-    const { fetchPage, requests } = createAlmanac();
-    for await (const day of paginate(fetchPage)) {
-      if (day.date !== "1970-11-13") continue;
-      assertEquals([day.weekday, day.moon, day.season], ["Friday", "🌕", "autumn"]);
-      ok(day.lowest < 0.8);
-      break;
+  await t.test("has no page for a number that is not whole", async () => {
+    await rejects(fetchWeek(0.5), new RangeError("There is no page 0.5."));
+    await rejects(fetchWeek(Number.NaN), new RangeError("There is no page NaN."));
+  });
+
+  await t.test("reads as one unbroken run of days", async () => {
+    const dates: string[] = [];
+    for await (const { date } of paginate(fetchWeek, 0)) {
+      dates.push(date);
+      if (date === "2024-02-29") break;
     }
 
-    assertEquals(requests.length, 46);
+    assertEquals(dates.length, 595);
+    assertEquals(new Set(dates).size, 595);
+    assertEquals(dates.toSorted(), dates);
+  });
+
+  await t.test("knows of a Friday the 13th under a full moon", async () => {
+    for await (const { date, weekday, moon } of paginate(fetchWeek, 0)) {
+      if (weekday !== "Friday" || !date.endsWith("-13") || moon !== "full moon") continue;
+      assertEquals(date, "2030-09-13");
+      break;
+    }
   });
 });

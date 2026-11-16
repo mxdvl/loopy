@@ -1,88 +1,96 @@
-import { sleep } from "./helpers.js";
-import { pcg32 } from "./prng.js";
-import { DAY, HOUR, daylight, scilly, local, moon, season, seaHappenings } from "./sky.js";
-
 /**
- * @typedef {object} Day
- * @property {number} day days since the almanac began
- * @property {string} date as `YYYY-MM-DD`
- * @property {string} weekday
- * @property {string} season
- * @property {string} moon its phase at noon
- * @property {string} [sunrise] as `HH:MM`
- * @property {string} [sunset] as `HH:MM`
- * @property {{ clock: string, kind: string, height: number }[]} tides heights in metres
- * @property {number} lowest how far out the sea goes that day, in metres
+ * An almanac that pretends to be a paginated API.
+ *
+ * Each page holds seven days. Nothing is stored: a page is worked out
+ * when it is asked for, and would come out the same if asked again.
+ *
+ * There is no last page to speak of. JavaScript's dates run out in the
+ * year 275760, long after anyone stops asking.
  */
 
+const DAY = 86_400_000;
+const DAYS_PER_PAGE = 7;
+
 /**
- * A pretend paginated API over an almanac with no last page.
- * One page is one week, and week 0 starts when JavaScript's clocks do:
- * on Thursday 1 January 1970.
- *
- * Nothing is stored. Every sunrise, moon and tide is worked out when its
- * week is asked for, and would come out the same if asked again.
- *
- * @param {object} [options]
- * @param {import("./sky.js").Place} [options.place]
- * @param {number} [options.weeks] where the almanac stops, if it ever does
- * @param {number} [options.latency] longest response time, in milliseconds
- * @param {bigint} [options.seed] decides how long each response takes
+ * The first day of page 0: Friday 15 July 2022, the day async generators
+ * became Baseline "widely available".
+ * @see https://web-platform-dx.github.io/web-features-explorer/features/async-generators
  */
-export function createAlmanac({
-  place = scilly,
-  weeks = Infinity,
-  latency = 0,
-  seed = 42n,
-} = {}) {
-  /** every week that was requested, in order @type {number[]} */
-  const requests = [];
-  const jitter = pcg32(seed, 1n);
-  const epoch = -place.offset * HOUR;
+const START = Date.UTC(2022, 6, 15);
 
-  /**
-   * @param {number} day
-   * @returns {Day}
-   */
-  function page(day) {
-    const midnight = epoch + day * DAY;
-    const noon = midnight + DAY / 2;
-    const { rise, set } = daylight(midnight, place);
-    const { date, weekday } = local(noon, place);
+/** How long the moon takes to go through its phases, in days. */
+const LUNATION = 29.530588853;
 
-    const tides = [];
-    for (const { time, kind, height } of seaHappenings(place, midnight)) {
-      if (time >= midnight + DAY) break;
-      tides.push({ clock: local(time, place).clock, kind, height: Math.round(height * 100) / 100 });
-    }
+/** A new moon to count from: 6 January 2000 at 18:14 UTC. */
+const NEW_MOON = Date.UTC(2000, 0, 6, 18, 14);
 
-    return {
-      day,
-      date,
-      weekday,
-      season: season(noon, place),
-      moon: moon(noon).glyph,
-      ...(rise === undefined ? {} : { sunrise: local(rise, place).clock }),
-      ...(set === undefined ? {} : { sunset: local(set, place).clock }),
-      tides,
-      lowest: Math.min(...tides.map(({ height }) => height)),
-    };
-  }
+/** The moon's phases, in the order they come round. */
+export const PHASES = Object.freeze(
+  /** @type {const} */ ([
+    "new moon",
+    "waxing crescent",
+    "first quarter",
+    "waxing gibbous",
+    "full moon",
+    "waning gibbous",
+    "last quarter",
+    "waning crescent",
+  ]),
+);
 
-  /**
-   * @param {number} [week]
-   * @returns {Promise<import("./paginate.js").Page<Day, number>>}
-   */
-  async function fetchPage(week = 0) {
-    requests.push(week);
-    if (latency > 0) {
-      await sleep(Number(jitter.next().value % BigInt(latency)));
-    }
-    if (week >= weeks) return { items: [], next: null };
+/** @typedef {(typeof PHASES)[number]} Phase */
 
-    const items = Array.from({ length: 7 }, (_, index) => page(week * 7 + index));
-    return { items, next: week + 1 < weeks ? week + 1 : null };
-  }
+/**
+ * One day of the almanac.
+ * @typedef {Readonly<{ date: string, weekday: string, moon: Phase }>} Day
+ * `date` is written as `YYYY-MM-DD`.
+ */
 
-  return { fetchPage, requests };
+const weekdays = new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: "UTC" });
+
+/**
+ * The phase the moon is nearest to at one moment. Each of the eight
+ * names covers a little under four days.
+ *
+ * It only counts lunations of average length from a known new moon.
+ * The real moon runs up to half a day early or late, so around the time
+ * the name changes it can be a day off.
+ *
+ * @param {number} time in milliseconds since the start of 1970
+ * @returns {Phase}
+ */
+export function moonPhase(time) {
+  const lunations = (time - NEW_MOON) / DAY / LUNATION;
+  const elapsed = lunations - Math.floor(lunations);
+  const nearest = Math.round(elapsed * PHASES.length) % PHASES.length;
+  // `nearest` is a whole number from 0 to 7, so there is always a phase.
+  return /** @type {Phase} */ (PHASES[nearest]);
+}
+
+/**
+ * @param {number} index days since the almanac's first
+ * @returns {Day}
+ */
+export function day(index) {
+  const noon = START + (index + 0.5) * DAY;
+  return {
+    date: new Date(noon).toISOString().slice(0, 10),
+    weekday: weekdays.format(noon),
+    moon: moonPhase(noon),
+  };
+}
+
+/**
+ * Asks the almanac for one page.
+ *
+ * @param {number} cursor the number of the page, counted from 0
+ * @returns {Promise<import("./paginate.js").Page<Day, number>>}
+ */
+export async function fetchWeek(cursor) {
+  if (!Number.isInteger(cursor)) throw new RangeError(`There is no page ${cursor}.`);
+  const first = cursor * DAYS_PER_PAGE;
+  return {
+    items: Array.from({ length: DAYS_PER_PAGE }, (_, offset) => day(first + offset)),
+    next: cursor + 1,
+  };
 }
