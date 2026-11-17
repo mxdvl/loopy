@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch main.js",
-    "test": "node --test",
+    "test": "node --harmony-temporal --test",
     "lint": "oxlint .",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
