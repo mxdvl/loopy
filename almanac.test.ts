@@ -15,10 +15,8 @@ test("moments", async (t) => {
     assertEquals(moments({ epoch: 1000, step: 10 }).take(4).toArray(), [1000, 1010, 1020, 1030]);
   });
 
-  await t.test("go backwards when told to", () => {
-    const backwards = moments({ epoch: 1000, step: 10, direction: "backwards" });
-
-    assertEquals(backwards.take(4).toArray(), [1000, 990, 980, 970]);
+  await t.test("go backwards when the step is negative", () => {
+    assertEquals(moments({ epoch: 1000, step: -10 }).take(4).toArray(), [1000, 990, 980, 970]);
   });
 
   await t.test("start now and step a day, unless told otherwise", () => {
@@ -37,9 +35,11 @@ test("moments", async (t) => {
 
   await t.test("end with the year -6000 when going backwards", () => {
     const firstDay = Date.UTC(-6000, 0, 1);
-    const backwards = moments({ epoch: firstDay + DAY, direction: "backwards" });
 
-    assertEquals(backwards.toArray(), [firstDay + DAY, firstDay]);
+    assertEquals(moments({ epoch: firstDay + DAY, step: -DAY }).toArray(), [
+      firstDay + DAY,
+      firstDay,
+    ]);
   });
 
   await t.test("are none at all from an epoch outside those years, or from no moment", () => {
@@ -122,9 +122,7 @@ test("almanac", async (t) => {
   });
 
   await t.test("only lands on Fridays when it steps a week from a Friday", () => {
-    const fridays = almanac({ epoch: WIDELY_AVAILABLE, step: 7 * DAY, direction: "backwards" })
-      .take(520)
-      .toArray();
+    const fridays = almanac({ epoch: WIDELY_AVAILABLE, step: -7 * DAY }).take(520).toArray();
 
     assertEquals(new Set(fridays.map(({ weekday }) => weekday)), new Set(["Friday"]));
     assertEquals(fridays.find(({ date }) => date.endsWith("-13"))?.date, "2022-05-13");

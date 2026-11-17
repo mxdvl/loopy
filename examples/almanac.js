@@ -30,14 +30,11 @@ const eerie = almanac({ epoch: WIDELY_AVAILABLE }).find(isFridayThe13thUnderAFul
 console.log("\nThe first Friday the 13th under a full moon since async generators:");
 console.log(eerie ? describe(eerie) : "There is none in the almanac.");
 
-// 3. It can also be told how far to step and which way to go. The epoch
-//    is a Friday, so a step of a week only ever lands on Fridays.
+// 3. It can also be told how far to step, and a negative step goes
+//    backwards. The epoch is a Friday, so a step of a week only ever
+//    lands on Fridays.
 
-const earlier = almanac({
-  epoch: WIDELY_AVAILABLE,
-  step: 7 * DAY,
-  direction: "backwards",
-}).find(isThe13th);
+const earlier = almanac({ epoch: WIDELY_AVAILABLE, step: -7 * DAY }).find(isThe13th);
 
 console.log("\nThe last Friday the 13th before them:");
 console.log(earlier ? describe(earlier) : "There is none in the almanac.");

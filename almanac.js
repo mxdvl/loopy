@@ -17,11 +17,10 @@ const EARLIEST = Date.UTC(-6000, 0, 1);
 const LATEST = Date.UTC(6001, 0, 1) - 1;
 
 /**
- * Where to begin, how far apart the moments are, and which way to go.
+ * Where to begin, and how far to go each time.
  * @typedef {object} Course
  * @property {number} [epoch] in milliseconds since the start of 1970; now, if left out
- * @property {number} [step] in milliseconds; a day, if left out
- * @property {"forwards" | "backwards"} [direction] forwards, if left out
+ * @property {number} [step] in milliseconds, negative to go backwards; a day, if left out
  */
 
 /**
@@ -31,12 +30,11 @@ const LATEST = Date.UTC(6001, 0, 1) - 1;
  * @param {Course} [course]
  * @returns {Generator<number, void, undefined>}
  */
-export function* moments({ epoch = Date.now(), step = DAY, direction = "forwards" } = {}) {
-  const stride = direction === "backwards" ? -step : step;
+export function* moments({ epoch = Date.now(), step = DAY } = {}) {
   let time = epoch;
   while (EARLIEST <= time && time <= LATEST) {
     yield time;
-    time += stride;
+    time += step;
   }
 }
 
