@@ -6,33 +6,37 @@
 
 export const DAY = 86_400_000;
 
-/** A direction to step in. */
-export const FORWARDS = 1;
-export const BACKWARDS = -1;
-
 /**
  * The day async generators became Baseline "widely available".
  * @see https://web-platform-dx.github.io/web-features-explorer/features/async-generators
  */
 export const WIDELY_AVAILABLE = Date.UTC(2022, 6, 15);
 
-/** JavaScript's dates reach this far either side of 1970, and no further. */
-const FURTHEST = 8_640_000_000_000_000;
+/** The almanac covers the years -6000 to 6000, and no others. */
+const EARLIEST = Date.UTC(-6000, 0, 1);
+const LATEST = Date.UTC(6001, 0, 1) - 1;
+
+/**
+ * Where to begin, how far apart the moments are, and which way to go.
+ * @typedef {object} Course
+ * @property {number} [epoch] in milliseconds since the start of 1970; now, if left out
+ * @property {number} [step] in milliseconds; a day, if left out
+ * @property {"forwards" | "backwards"} [direction] forwards, if left out
+ */
 
 /**
  * One moment after another, from the epoch onwards.
- * It only ends where JavaScript's dates do, some 270,000 years either way.
+ * It ends when it leaves the years the almanac covers.
  *
- * @param {number} epoch where to begin, in milliseconds since the start of 1970
- * @param {number} step how far apart the moments are, in milliseconds
- * @param {typeof FORWARDS | typeof BACKWARDS} direction which way to go
+ * @param {Course} [course]
  * @returns {Generator<number, void, undefined>}
  */
-export function* moments(epoch, step, direction) {
-  for (let count = 0; ; count++) {
-    const time = epoch + direction * count * step;
-    if (!(Math.abs(time) <= FURTHEST)) return;
+export function* moments({ epoch = Date.now(), step = DAY, direction = "forwards" } = {}) {
+  const stride = direction === "backwards" ? -step : step;
+  let time = epoch;
+  while (EARLIEST <= time && time <= LATEST) {
     yield time;
+    time += stride;
   }
 }
 
@@ -80,8 +84,8 @@ export function moonPhase(time) {
 /**
  * What the almanac says about one moment.
  * @typedef {Readonly<{ time: number, date: string, weekday: string, moon: Phase }>} Entry
- * `date` is written as `YYYY-MM-DD`, in UTC. Years beyond four digits
- * are written the way JavaScript writes them, as in `+275760-09-13`.
+ * `date` is written as `YYYY-MM-DD`, in UTC. Years before 0 are written
+ * the way JavaScript writes them, as in `-006000-01-01`.
  */
 
 const weekdays = new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: "UTC" });
@@ -103,13 +107,11 @@ export function entry(time) {
 /**
  * The almanac's entries, one for each moment from the epoch onwards.
  *
- * @param {number} epoch where to begin, in milliseconds since the start of 1970
- * @param {number} step how far apart the entries are, in milliseconds
- * @param {typeof FORWARDS | typeof BACKWARDS} direction which way to go
+ * @param {Course} [course]
  * @returns {Generator<Entry, void, undefined>}
  */
-export function* almanac(epoch, step, direction) {
-  for (const time of moments(epoch, step, direction)) {
+export function* almanac(course) {
+  for (const time of moments(course)) {
     yield entry(time);
   }
 }
