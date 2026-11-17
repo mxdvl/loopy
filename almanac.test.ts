@@ -42,6 +42,12 @@ test("moments", async (t) => {
     ]);
   });
 
+  await t.test("are none at all when the step is zero or not a whole number", () => {
+    for (const step of [0, -0, 0.5, DAY + 0.1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      assertEquals(moments({ epoch: 1000, step }).toArray(), []);
+    }
+  });
+
   await t.test("are none at all from an epoch outside those years, or from no moment", () => {
     assertEquals(moments({ epoch: Date.UTC(6001, 0, 1) }).toArray(), []);
     assertEquals(moments({ epoch: Date.UTC(-6001, 11, 31) }).toArray(), []);

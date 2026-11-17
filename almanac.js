@@ -20,19 +20,21 @@ const LATEST = Date.UTC(6001, 0, 1) - 1;
  * Where to begin, and how far to go each time.
  * @typedef {object} Course
  * @property {number} [epoch] in milliseconds since the start of 1970; now, if left out
- * @property {number} [step] in milliseconds, negative to go backwards; a day, if left out
+ * @property {number} [step] a whole number of milliseconds other than 0, negative to go
+ *   backwards; a day, if left out
  */
 
 /**
  * One moment after another, from the epoch onwards.
- * It ends when it leaves the years the almanac covers.
+ * It ends when it leaves the years the almanac covers, and never begins
+ * if the step would not take it anywhere exact.
  *
  * @param {Course} [course]
  * @returns {Generator<number, void, undefined>}
  */
 export function* moments({ epoch = Date.now(), step = DAY } = {}) {
   let time = epoch;
-  while (EARLIEST <= time && time <= LATEST) {
+  while (Number.isInteger(step) && step !== 0 && EARLIEST <= time && time <= LATEST) {
     yield time;
     time += step;
   }
